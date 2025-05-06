@@ -18,7 +18,7 @@ import { useRef, useState } from "react";
 import "./App.scss";
 import { LiveAPIProvider } from "./contexts/LiveAPIContext";
 import SidePanel from "./components/side-panel/SidePanel";
-import { DateTime } from "./components/date-time/DateTime";
+import SimpleCalendar from "./components/simple-calendar/SimpleCalendar";
 import ControlTray from "./components/control-tray/ControlTray";
 import cn from "classnames";
 
@@ -44,8 +44,8 @@ function App() {
           <SidePanel />
           <main>
             <div className="main-app-area">
-              {/* Using DateTime component instead of Altair */}
-              <DateTime />
+              {/* Using SimpleCalendar component */}
+              <SimpleCalendar />
               <video
                 className={cn("stream", {
                   hidden: !videoRef.current || !videoStream,
