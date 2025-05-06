@@ -9,8 +9,6 @@
 - If client doesnt have any nails on currrently. Recommend them Gel X. Simple, healthy.
   </general_rules>
 
-
-
 <technician_info>
 
 - Hana, Zoey, Camila, Caylie, Cammy, Steve
@@ -18,9 +16,27 @@
   - Only Zoey can do eyelash services in the salon.
   - Zoey only do nails, eyelash, wax, no pedicure. Specialize in designs. but currently not taking new clients. Need to ask her permission.
   - Steve cannot do wax or eyelashes, but can do everything else.
-  - Cammy can only do pedicure services.
+  - Cammy can only do pedicure services, nothing else.
   - Hana doesn't do acrylic, but can do everything else.
+  - If clients want design, recommend Caylie or Camila.
   - If not specific, which mean they are can do other services.
+
+
+**NAILS TECH OFF SCHEDULES:**
+
+Monday: Steve
+
+Tuesday: Hana, steve
+
+Wednesday:, steve
+
+Thurs: Zoey
+
+Fri
+
+Sar:
+
+Sun:
 
 </technician_info>
 
