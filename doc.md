@@ -164,7 +164,7 @@ const checkAvailabilityDeclaration: FunctionDeclaration = {
     properties: {
       date: {
         type: SchemaType.STRING,
-        description: "The date to check in YYYY-MM-DD format. If not provided, will return availability for the current week."
+        description: "The date to check - can be in YYYY-MM-DD format, a day name (Monday, Tuesday, etc), or keywords like 'today' or 'tomorrow'. If not provided, will return availability for the current week."
       },
       time: {
         type: SchemaType.STRING,
@@ -369,3 +369,131 @@ export const DateTime = DateTimeComponent;
 - **Missing Response**: Always send a response back to the model using `client.sendToolResponse`
 - **Multiple Functions**: When implementing multiple functions, make sure each has a unique name
 - **Raw Results Read Aloud**: If the model is reading out raw function results, add explicit instructions in your system prompt and include a natural language `message` field in your responses
+
+## Enhanced Date Handling for check_availability
+
+### Date Input Processing
+
+The `check_availability` function supports various date input formats:
+
+1. **YYYY-MM-DD format**: Standard date format (e.g., "2024-07-10")
+2. **Day names**: Days of the week (e.g., "Monday", "Tuesday", "Wednesday")
+3. **Keywords**: Special terms like "today" and "tomorrow"
+
+### Implementation Steps
+
+1. **Update Function Description**:
+   ```typescript
+   const checkAvailabilityDeclaration: FunctionDeclaration = {
+     // ... existing code ...
+     parameters: {
+       type: SchemaType.OBJECT,
+       properties: {
+         date: {
+           type: SchemaType.STRING,
+           description: "The date to check - can be in YYYY-MM-DD format, a day name (Monday, Tuesday, etc), or keywords like 'today' or 'tomorrow'. If not provided, will return availability for the current week."
+         },
+         // ... other parameters ...
+       }
+     }
+   };
+   ```
+
+2. **Add Date Processing Functions**:
+   ```typescript
+   // Process date input (handles keywords and day names)
+   const processDateInput = (dateInput: string): string => {
+     if (!dateInput) return '';
+     
+     const today = new Date();
+     const tomorrow = new Date(today);
+     tomorrow.setDate(today.getDate() + 1);
+     
+     // Handle special keywords
+     switch (dateInput.toLowerCase()) {
+       case 'today':
+         return today.toISOString().split('T')[0]; // YYYY-MM-DD
+       case 'tomorrow':
+         return tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+       default:
+         // Check if it's a day name
+         if (isDayName(dateInput)) {
+           return getDayNameToDate(dateInput);
+         }
+         // Assume it's already in YYYY-MM-DD format
+         return dateInput;
+     }
+   };
+   
+   // Check if input is a day name
+   const isDayName = (input: string): boolean => {
+     const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+     return days.includes(input.toLowerCase());
+   };
+   
+   // Convert day name to next occurrence date
+   const getDayNameToDate = (dayName: string): string => {
+     const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+     const today = new Date();
+     const todayDayIndex = today.getDay(); // 0 for Sunday, 1 for Monday, etc.
+     
+     // Find day index and calculate days to add
+     const targetDayIndex = days.findIndex(day => day === dayName.toLowerCase());
+     let daysToAdd = targetDayIndex - todayDayIndex;
+     
+     // If day has passed this week, get next week's occurrence
+     if (daysToAdd <= 0) daysToAdd += 7;
+     
+     // Create new date
+     const targetDate = new Date(today);
+     targetDate.setDate(today.getDate() + daysToAdd);
+     
+     return targetDate.toISOString().split('T')[0];
+   };
+   ```
+
+3. **Include Today's Date in System Instructions**:
+   ```typescript
+   // Get today's date for system instructions
+   const today = new Date();
+   const formattedToday = today.toLocaleDateString('en-US', { 
+     weekday: 'long', 
+     year: 'numeric', 
+     month: 'long', 
+     day: 'numeric' 
+   });
+   
+   setConfig({
+     // ... existing config ...
+     systemInstruction: {
+       parts: [
+         {
+           text: `Today's date is ${formattedToday}. You are a helpful nail salon receptionist. Use the check_availability function when clients ask about available appointments. They may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data.`,
+         },
+       ],
+     },
+     // ... rest of config ...
+   });
+   ```
+
+4. **Process Date in Function Handler**:
+   ```typescript
+   // Inside the function call handler
+   const dateToCheck = args.date ? processDateInput(args.date) : '';
+   ```
+
+### Best Practices
+
+1. **Date Format Consistency**: Always convert different date inputs to YYYY-MM-DD format internally
+2. **Context Awareness**: Include today's date in system instructions for better AI context
+3. **Error Handling**: Add safeguards for invalid date formats
+4. **User-Friendly Responses**: Format dates in natural language for display (e.g., "Monday, July 8")
+5. **Logging**: Add console logs during date processing for easier debugging
+
+### Example Prompts
+
+Users can now ask questions like:
+- "Do you have any availability today at 2pm?"
+- "What times are free tomorrow?"
+- "Is Tuesday at 10am available?"
+- "Show me slots for next Wednesday"

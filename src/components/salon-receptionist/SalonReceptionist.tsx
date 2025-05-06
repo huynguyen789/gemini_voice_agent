@@ -74,6 +74,34 @@ const checkAvailabilityDeclaration: FunctionDeclaration = {
   }
 };
 
+// Book appointment function declaration
+const bookAppointmentDeclaration: FunctionDeclaration = {
+  name: "book_appointment",
+  description: "Books an appointment in the nail salon calendar",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      date: {
+        type: SchemaType.STRING,
+        description: "The date to book in YYYY-MM-DD format."
+      },
+      time: {
+        type: SchemaType.STRING,
+        description: "The time to book in HH:MM format (24-hour)."
+      },
+      customerName: {
+        type: SchemaType.STRING,
+        description: "Name of the customer making the appointment."
+      },
+      service: {
+        type: SchemaType.STRING,
+        description: "The service the customer is booking (e.g., Gel Manicure, Pedicure, etc.)."
+      }
+    },
+    required: ["date", "time", "customerName", "service"]
+  }
+};
+
 // Helper functions for date handling
 const processDateInput = (dateInput: string): string => {
   if (!dateInput) return '';
@@ -153,6 +181,7 @@ function SalonReceptionistComponent() {
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [checkedDate, setCheckedDate] = useState<string | null>(null);
   const [lastAvailabilityCheck, setLastAvailabilityCheck] = useState<any | null>(null);
+  const [lastBookingResult, setLastBookingResult] = useState<any | null>(null);
   
   const { client, setConfig } = useLiveAPIContext();
   
@@ -186,12 +215,12 @@ function SalonReceptionistComponent() {
       systemInstruction: {
         parts: [
           {
-            text: `Today's date is ${formattedToday}. You are a helpful nail salon receptionist. Use the check_availability function when clients ask about available appointments. They may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.`,
+            text: `Today's date is ${formattedToday}. You are a helpful nail salon receptionist. Use the check_availability function when clients ask about available appointments and book_appointment function when they want to book an appointment. Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.`,
           },
         ],
       },
       tools: [
-        { functionDeclarations: [checkAvailabilityDeclaration] },
+        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration] },
       ],
     });
   }, [setConfig]);
@@ -201,12 +230,16 @@ function SalonReceptionistComponent() {
     const onToolCall = (toolCall: ToolCall) => {
       console.log(`Got tool call`, toolCall);
       
-      const fc = toolCall.functionCalls.find(
+      const checkAvailabilityCall = toolCall.functionCalls.find(
         (fc) => fc.name === checkAvailabilityDeclaration.name
       );
       
-      if (fc) {
-        const args = fc.args as {
+      const bookAppointmentCall = toolCall.functionCalls.find(
+        (fc) => fc.name === bookAppointmentDeclaration.name
+      );
+      
+      if (checkAvailabilityCall) {
+        const args = checkAvailabilityCall.args as {
           date?: string;
           time?: string;
         };
@@ -272,7 +305,61 @@ function SalonReceptionistComponent() {
         client.sendToolResponse({
           functionResponses: [{
             response: response,
-            id: fc.id,
+            id: checkAvailabilityCall.id,
+          }],
+        });
+      } else if (bookAppointmentCall) {
+        const args = bookAppointmentCall.args as {
+          date: string;
+          time: string;
+          customerName: string;
+          service: string;
+        };
+        
+        let response: any;
+        
+        // Process date input for special keywords and day names
+        const dateToBook = processDateInput(args.date);
+        
+        // Check if the slot is available
+        const isAvailable = !isSlotBooked(dateToBook, args.time);
+        
+        if (isAvailable) {
+          // Create a new appointment
+          const newAppointment: Appointment = {
+            id: Math.max(0, ...appointments.map(a => a.id)) + 1, // Generate a new unique ID
+            date: dateToBook,
+            time: args.time,
+            customerName: args.customerName,
+            service: args.service
+          };
+          
+          // Add the appointment to the list
+          setAppointments(prevAppointments => [...prevAppointments, newAppointment]);
+          
+          setCheckedDate(dateToBook);
+          
+          // Create success response
+          response = {
+            success: true,
+            appointment: newAppointment,
+            message: `Successfully booked an appointment for ${args.customerName} on ${formatDate(dateToBook)} at ${args.time} for ${args.service}.`
+          };
+        } else {
+          // Create error response
+          response = {
+            success: false,
+            message: `Sorry, the slot at ${args.time} on ${formatDate(dateToBook)} is already booked.`
+          };
+        }
+        
+        setLastBookingResult(response);
+        
+        // Send response back to the model
+        client.sendToolResponse({
+          functionResponses: [{
+            response: response,
+            id: bookAppointmentCall.id,
           }],
         });
       }
@@ -286,7 +373,7 @@ function SalonReceptionistComponent() {
   
   return (
     <div className="salon-receptionist">
-      {lastAvailabilityCheck && (
+      {lastAvailabilityCheck && !lastBookingResult && (
         <div className="availability-results">
           <h3>Last Availability Check</h3>
           <div className="result-content">
@@ -322,6 +409,23 @@ function SalonReceptionistComponent() {
               </div>
             )}
             <p className="result-message">{lastAvailabilityCheck.message}</p>
+          </div>
+        </div>
+      )}
+      
+      {lastBookingResult && (
+        <div className={`booking-results ${lastBookingResult.success ? 'success' : 'error'}`}>
+          <h3>Booking Result</h3>
+          <div className="result-content">
+            <p className="result-message">{lastBookingResult.message}</p>
+            {lastBookingResult.success && lastBookingResult.appointment && (
+              <div className="appointment-details">
+                <p>Customer: <strong>{lastBookingResult.appointment.customerName}</strong></p>
+                <p>Date: <strong>{formatDate(lastBookingResult.appointment.date)}</strong></p>
+                <p>Time: <strong>{lastBookingResult.appointment.time}</strong></p>
+                <p>Service: <strong>{lastBookingResult.appointment.service}</strong></p>
+              </div>
+            )}
           </div>
         </div>
       )}
