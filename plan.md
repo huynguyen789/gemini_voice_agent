@@ -1,4 +1,5 @@
 * [X] Basic chatting
 * [X] Basic salon info
-* [ ] Function to contact manager
+* [ ] basic calandar
 * [ ] Booking appoinments
+* [ ] Function to contact manager
