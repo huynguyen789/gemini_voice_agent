@@ -74,7 +74,7 @@ useEffect(() => {
     systemInstruction: {
       parts: [
         {
-          text: 'System instructions that tell the model when to use your function',
+          text: 'System instructions that tell the model when to use your function. When you receive function results, formulate a natural response based on the data - do not read out the raw data.',
         },
       ],
     },
@@ -97,14 +97,14 @@ useEffect(() => {
     const fc = toolCall.functionCalls.find(
       (fc) => fc.name === myFunctionDeclaration.name
     );
-    
+  
     if (fc) {
       // Extract arguments
       const args = fc.args;
-      
+  
       // Execute your function logic
       const result = myFunctionImplementation(args);
-      
+  
       // Send response back to the model
       client.sendToolResponse({
         functionResponses: [{
@@ -135,6 +135,123 @@ import { MyFeature } from "./components/my-feature/MyFeature";
   {/* Other components */}
 </div>
 ```
+
+## Preventing Raw Function Results in Audio Responses
+
+- **Result Structure**: Structure your function results to be easily processed by the model. Include a `message` field with a natural language description that the model can incorporate into its response.
+
+#### Best Practices:
+
+- Include clear instructions in your system prompt about handling function results
+- Structure function results to include natural language descriptions
+- For complex data like appointment availability, include a pre-formatted `message` field
+- Keep testing the responses to ensure the model is presenting the information naturally
+
+## Implementation Example: Salon Appointment Availability
+
+### The `check_availability` Function
+
+This function allows the AI to check appointment availability in a salon calendar. It demonstrates how to implement a flexible function that handles different query types.
+
+#### Function Declaration
+
+```typescript
+const checkAvailabilityDeclaration: FunctionDeclaration = {
+  name: "check_availability",
+  description: "Checks for available appointment slots in the nail salon calendar",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      date: {
+        type: SchemaType.STRING,
+        description: "The date to check in YYYY-MM-DD format. If not provided, will return availability for the current week."
+      },
+      time: {
+        type: SchemaType.STRING,
+        description: "Optional. The specific time to check in HH:MM format (24-hour)."
+      }
+    },
+    required: []
+  }
+};
+```
+
+#### Implementation Logic
+
+The function handles three different query types:
+
+1. **Specific date and time check**
+
+   ```typescript
+   // When both date and time are provided
+   if (args.date && args.time) {
+     const available = !isSlotBooked(date, time);
+
+     response = {
+       date: date,
+       time: time,
+       available: available,
+       message: available 
+         ? `${time} on ${formatDate(date)} is available for booking.` 
+         : `Sorry, ${time} on ${formatDate(date)} is already booked.`
+     };
+   }
+   ```
+2. **All available slots for a date**
+
+   ```typescript
+   // When only date is provided
+   else if (args.date) {
+     const availableSlots = getAvailableSlots(date);
+
+     response = {
+       date: date,
+       available_slots: availableSlots,
+       message: availableSlots.length > 0
+         ? `There are ${availableSlots.length} available slots on ${formatDate(date)}: ${availableSlots.join(', ')}`
+         : `Sorry, there are no available slots on ${formatDate(date)}.`
+     };
+   }
+   ```
+3. **Weekly availability overview**
+
+   ```typescript
+   // When no specific date is provided
+   else {
+     const weekDates = getWeekDates();
+     const weekAvailability = {};
+     let totalAvailableSlots = 0;
+
+     weekDates.forEach(day => {
+       const availableSlots = getAvailableSlots(day.date);
+       weekAvailability[day.date] = availableSlots;
+       totalAvailableSlots += availableSlots.length;
+     });
+
+     response = {
+       week_of: weekDates[0].date,
+       availability: weekAvailability,
+       message: `There are ${totalAvailableSlots} available slots this week.`
+     };
+   }
+   ```
+
+#### Using the Function
+
+The AI can be prompted to check availability in various ways:
+
+- "Do you have any availability this Thursday at 2pm?"
+- "What times are available next Tuesday?"
+- "Show me your availability for this week"
+
+#### Extending the Function
+
+To extend this function, you might:
+
+1. Add a `service` parameter to filter slots by required duration
+2. Include staff availability for specific services
+3. Add a booking confirmation flow after checking availability
+4. Implement recurring appointment checks
 
 ## Example: Current Date and Time Function
 
@@ -172,7 +289,7 @@ function DateTimeComponent() {
       systemInstruction: {
         parts: [
           {
-            text: 'You can help the user get the current date and time. When they ask for the current time or date, use the "get_current_datetime" function.',
+            text: 'You can help the user get the current date and time. When they ask for the current time or date, use the "get_current_datetime" function. When you receive the function results, provide a natural response - do not read out the raw data.',
           },
         ],
       },
@@ -189,28 +306,29 @@ function DateTimeComponent() {
       const fc = toolCall.functionCalls.find(
         (fc) => fc.name === getCurrentDateTimeDeclaration.name
       );
-      
+  
       if (fc) {
         // Get current date and time
         const now = new Date();
         const formattedDateTime = now.toLocaleString();
-        
+    
         // Update the state
         setDateTime(formattedDateTime);
-        
+    
         // Send response back to the model
         client.sendToolResponse({
           functionResponses: [{
             response: { 
               current_datetime: formattedDateTime,
               timestamp: now.getTime(),
+              message: `The current date and time is ${formattedDateTime}.`
             },
             id: fc.id,
           }],
         });
       }
     };
-    
+  
     client.on("toolcall", onToolCall);
     return () => {
       client.off("toolcall", onToolCall);
@@ -242,6 +360,7 @@ export const DateTime = DateTimeComponent;
 4. **Error Handling**: Implement error handling in your function logic
 5. **Cleanup Listeners**: Always clean up event listeners in the `useEffect` return function
 6. **UI Feedback**: Provide visual feedback in the UI when functions are called
+7. **Guide Result Handling**: Explicitly instruct the model on how to handle function results
 
 ## Common Issues
 
@@ -249,3 +368,4 @@ export const DateTime = DateTimeComponent;
 - **Parameter Type Mismatch**: Ensure parameter types in the declaration match what your implementation expects
 - **Missing Response**: Always send a response back to the model using `client.sendToolResponse`
 - **Multiple Functions**: When implementing multiple functions, make sure each has a unique name
+- **Raw Results Read Aloud**: If the model is reading out raw function results, add explicit instructions in your system prompt and include a natural language `message` field in your responses

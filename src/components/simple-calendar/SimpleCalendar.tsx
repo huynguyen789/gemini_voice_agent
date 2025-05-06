@@ -49,16 +49,27 @@ const timeSlots = [
   "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
 ];
 
-// Initial appointments (pre-populated for demo)
-const initialAppointments: Appointment[] = [
-  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Haircut & Style" },
-  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Color Treatment" },
-  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Manicure" },
-  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Beard Trim" },
+// Default appointments (pre-populated for demo)
+const defaultAppointments: Appointment[] = [
+  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure" },
+  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure" },
+  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions" },
+  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure" },
+  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure" },
+  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint" },
+  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination" },
 ];
 
-export function SimpleCalendar() {
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+// Props type for the component
+interface SimpleCalendarProps {
+  appointments?: Appointment[];
+  highlightDate?: string | null;
+}
+
+export function SimpleCalendar({ 
+  appointments = defaultAppointments,
+  highlightDate = null 
+}: SimpleCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
@@ -92,13 +103,15 @@ export function SimpleCalendar() {
   // Render the calendar
   return (
     <div className="simple-calendar">
-      <h2>Salon Weekly Calendar</h2>
+      <h2>Nail Salon Weekly Calendar</h2>
       
       <div className="calendar-grid">
         <div className="grid-header">
           <div className="time-column">Time</div>
           {weekDates.map((day, index) => (
-            <div key={index} className="day-column">{day.label}</div>
+            <div key={index} className={`day-column ${day.date === highlightDate ? 'highlighted' : ''}`}>
+              {day.label}
+            </div>
           ))}
         </div>
         
@@ -109,10 +122,12 @@ export function SimpleCalendar() {
               
               {weekDates.map((day) => {
                 const appointment = isSlotBooked(day.date, time);
+                const isHighlighted = day.date === highlightDate;
+                
                 return (
                   <div 
                     key={`${day.date}-${time}`} 
-                    className={`calendar-slot ${appointment ? 'booked' : 'available'}`}
+                    className={`calendar-slot ${appointment ? 'booked' : 'available'} ${isHighlighted ? 'highlighted' : ''}`}
                     onClick={() => handleSlotClick(day.date, time)}
                   >
                     {appointment ? (
