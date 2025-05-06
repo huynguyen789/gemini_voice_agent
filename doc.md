@@ -505,8 +505,10 @@ Users can now ask questions like:
 The Salon Receptionist demo showcases Gemini's ability to use function calling for a practical application. It simulates a nail salon's appointment system where users can:
 
 1. Check availability of time slots
-2. Book new appointments
+2. Book new appointments with preferred technicians
 3. Cancel existing appointments
+
+The demo includes comprehensive salon information including services, pricing, technician specialties, and policies.
 
 ## Component Structure
 
@@ -516,11 +518,13 @@ The demo is built with two main components:
    - Implements function declarations and handlers
    - Manages appointment state
    - Displays availability and booking results
+   - Contains detailed salon information in system instructions
 
 2. **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`)
    - Visualizes weekly appointments in calendar format
    - Shows available and booked time slots
    - Highlights dates and provides appointment details
+   - Displays technician assignments
 
 ## Function Capabilities
 
@@ -550,7 +554,7 @@ Creates new appointments in the calendar:
 ```typescript
 // Example usage
 "Book an appointment for Maria on Thursday at 11am for a gel manicure"
-"I'd like to schedule a pedicure for John tomorrow at 3pm"
+"I'd like to schedule a pedicure for John tomorrow at 3pm with Cammy"
 ```
 
 Parameters:
@@ -558,6 +562,7 @@ Parameters:
 - `time`: Time slot in HH:MM format
 - `customerName`: Name of the customer
 - `service`: Service being booked
+- `technician` (optional): Preferred technician for the service
 
 Returns:
 - Success/failure status
@@ -604,8 +609,20 @@ type Appointment = {
   time: string; // HH:MM
   customerName: string;
   service: string;
+  technician?: string; // Optional preferred technician
 };
 ```
+
+### Salon Information
+
+The system instructions include comprehensive details about the salon:
+
+- Complete service menu with prices
+- Technician information and specialties
+- Salon policies and operating hours
+- Special offerings and add-on services
+
+This information allows the AI to provide accurate responses about services, make appropriate technician recommendations, and handle specific requests.
 
 ### UI Feedback
 
@@ -617,10 +634,10 @@ The component provides visual feedback for each action:
 
 ## Conversation Flow
 
-1. User asks about availability, booking, or cancellation
-2. Gemini recognizes the intent and calls the appropriate function
-3. Function executes and returns structured data
-4. Gemini formulates natural language response based on function results
+1. User asks about availability, booking, cancellation, or salon information
+2. Gemini recognizes the intent and calls the appropriate function or provides information
+3. For function calls, the function executes and returns structured data
+4. Gemini formulates natural language response based on function results or system knowledge
 5. UI updates to reflect changes and provide visual feedback
 
 ## Integration
@@ -630,7 +647,7 @@ The SalonReceptionist component integrates with the LiveAPI context for function
 ```typescript
 const { client, setConfig } = useLiveAPIContext();
 
-// Configure function declarations
+// Configure function declarations and system instructions
 useEffect(() => {
   setConfig({
     tools: [
@@ -641,7 +658,18 @@ useEffect(() => {
         ] 
       },
     ],
-    // other config...
+    systemInstruction: {
+      parts: [
+        {
+          text: `Today's date is ${formattedToday}. 
+          
+You are a receptionist from Madison Valgari Nails Salon...
+// Detailed salon information, services, and policies
+...
+`
+        }
+      ]
+    }
   });
 }, []);
 ```

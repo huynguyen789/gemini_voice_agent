@@ -12,6 +12,7 @@ export type Appointment = {
   time: string; // HH:MM
   customerName: string;
   service: string;
+  technician?: string; // Optional technician name
 };
 
 // Get the dates for this week (Monday-Sunday)
@@ -134,6 +135,9 @@ export function SimpleCalendar({
                       <div className="appointment-info">
                         <div className="customer">{appointment.customerName}</div>
                         <div className="service">{appointment.service}</div>
+                        {appointment.technician && (
+                          <div className="technician">with {appointment.technician}</div>
+                        )}
                       </div>
                     ) : (
                       <div className="available-text">Available</div>
@@ -174,6 +178,9 @@ export function SimpleCalendar({
                 <div className="appointment-customer">{appointment.customerName}</div>
                 <div className="appointment-date">{appointment.date} at {appointment.time}</div>
                 <div className="appointment-service">{appointment.service}</div>
+                {appointment.technician && (
+                  <div className="appointment-technician">Technician: {appointment.technician}</div>
+                )}
               </li>
             ))}
           </ul>
