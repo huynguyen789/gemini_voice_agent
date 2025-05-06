@@ -171,8 +171,8 @@ export function SimpleCalendar({
           <ul>
             {appointments.map((appointment) => (
               <li key={appointment.id} className="appointment-item">
-                <div className="appointment-date">{appointment.date} at {appointment.time}</div>
                 <div className="appointment-customer">{appointment.customerName}</div>
+                <div className="appointment-date">{appointment.date} at {appointment.time}</div>
                 <div className="appointment-service">{appointment.service}</div>
               </li>
             ))}

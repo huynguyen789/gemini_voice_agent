@@ -497,3 +497,151 @@ Users can now ask questions like:
 - "What times are free tomorrow?"
 - "Is Tuesday at 10am available?"
 - "Show me slots for next Wednesday"
+
+# Salon Receptionist Demo Documentation
+
+## Overview
+
+The Salon Receptionist demo showcases Gemini's ability to use function calling for a practical application. It simulates a nail salon's appointment system where users can:
+
+1. Check availability of time slots
+2. Book new appointments
+3. Cancel existing appointments
+
+## Component Structure
+
+The demo is built with two main components:
+
+1. **SalonReceptionist** (`src/components/salon-receptionist/SalonReceptionist.tsx`)
+   - Implements function declarations and handlers
+   - Manages appointment state
+   - Displays availability and booking results
+
+2. **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`)
+   - Visualizes weekly appointments in calendar format
+   - Shows available and booked time slots
+   - Highlights dates and provides appointment details
+
+## Function Capabilities
+
+### 1. Check Availability (`check_availability`)
+
+Checks for open appointment slots with flexible date/time inputs:
+
+```typescript
+// Example usage
+"Are there any appointments available tomorrow?"
+"What times are open on Friday?" 
+"Is 2pm available on Thursday?"
+```
+
+Parameters:
+- `date` (optional): Date to check in YYYY-MM-DD format or natural language ("today", "tomorrow", day names)
+- `time` (optional): Specific time to check in HH:MM format
+
+Returns:
+- Available slots for specific date/time or across the week
+- Formatted messages about availability status
+
+### 2. Book Appointment (`book_appointment`)
+
+Creates new appointments in the calendar:
+
+```typescript
+// Example usage
+"Book an appointment for Maria on Thursday at 11am for a gel manicure"
+"I'd like to schedule a pedicure for John tomorrow at 3pm"
+```
+
+Parameters:
+- `date`: Date for the appointment
+- `time`: Time slot in HH:MM format
+- `customerName`: Name of the customer
+- `service`: Service being booked
+
+Returns:
+- Success/failure status
+- Details of the booked appointment
+- Error message if slot is unavailable
+
+### 3. Cancel Appointment (`cancel_appointment`)
+
+Cancels existing appointments by customer name:
+
+```typescript
+// Example usage
+"Cancel Sarah's appointment"
+"I need to cancel Mike's appointment on Wednesday"
+```
+
+Parameters:
+- `customer_name`: Name of the customer
+- `date` (optional): Date of the appointment to disambiguate
+- `time` (optional): Time of the appointment to disambiguate
+
+Returns:
+- Success/failure status
+- Details of the cancelled appointment
+- List of appointments if multiple found
+
+## Implementation Details
+
+### Date Processing
+
+The component includes helper functions to handle natural language date inputs:
+
+- `processDateInput()`: Converts "today", "tomorrow", or day names to YYYY-MM-DD format
+- `formatDate()`: Converts dates to human-readable format (e.g., "Monday, June 10")
+
+### Appointment Storage
+
+Appointments are stored in React state with the following structure:
+
+```typescript
+type Appointment = {
+  id: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  customerName: string;
+  service: string;
+};
+```
+
+### UI Feedback
+
+The component provides visual feedback for each action:
+- Green success indicators for successful bookings
+- Red error indicators for failed operations
+- Yellow/amber indicators for cancellations
+- List views for multiple appointment scenarios
+
+## Conversation Flow
+
+1. User asks about availability, booking, or cancellation
+2. Gemini recognizes the intent and calls the appropriate function
+3. Function executes and returns structured data
+4. Gemini formulates natural language response based on function results
+5. UI updates to reflect changes and provide visual feedback
+
+## Integration
+
+The SalonReceptionist component integrates with the LiveAPI context for function calling:
+
+```typescript
+const { client, setConfig } = useLiveAPIContext();
+
+// Configure function declarations
+useEffect(() => {
+  setConfig({
+    tools: [
+      { functionDeclarations: [
+          checkAvailabilityDeclaration, 
+          bookAppointmentDeclaration, 
+          cancelAppointmentDeclaration
+        ] 
+      },
+    ],
+    // other config...
+  });
+}, []);
+```

@@ -102,6 +102,30 @@ const bookAppointmentDeclaration: FunctionDeclaration = {
   }
 };
 
+// Cancel appointment function declaration
+const cancelAppointmentDeclaration: FunctionDeclaration = {
+  name: "cancel_appointment",
+  description: "Cancels an existing appointment in the nail salon calendar",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      customer_name: {
+        type: SchemaType.STRING,
+        description: "Name of the customer whose appointment should be cancelled."
+      },
+      date: {
+        type: SchemaType.STRING,
+        description: "Optional. The date of the appointment in YYYY-MM-DD format to help identify the correct appointment."
+      },
+      time: {
+        type: SchemaType.STRING,
+        description: "Optional. The time of the appointment in HH:MM format to help identify the correct appointment."
+      }
+    },
+    required: ["customer_name"]
+  }
+};
+
 // Helper functions for date handling
 const processDateInput = (dateInput: string): string => {
   if (!dateInput) return '';
@@ -182,6 +206,7 @@ function SalonReceptionistComponent() {
   const [checkedDate, setCheckedDate] = useState<string | null>(null);
   const [lastAvailabilityCheck, setLastAvailabilityCheck] = useState<any | null>(null);
   const [lastBookingResult, setLastBookingResult] = useState<any | null>(null);
+  const [lastCancellationResult, setLastCancellationResult] = useState<any | null>(null);
   
   const { client, setConfig } = useLiveAPIContext();
   
@@ -215,12 +240,12 @@ function SalonReceptionistComponent() {
       systemInstruction: {
         parts: [
           {
-            text: `Today's date is ${formattedToday}. You are a helpful nail salon receptionist. Use the check_availability function when clients ask about available appointments and book_appointment function when they want to book an appointment. Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.`,
+            text: `Today's date is ${formattedToday}. You are a helpful nail salon receptionist. Use the check_availability function when clients ask about available appointments, book_appointment function when they want to book an appointment, and cancel_appointment function when they want to cancel an existing appointment. Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.`,
           },
         ],
       },
       tools: [
-        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration] },
+        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration, cancelAppointmentDeclaration] },
       ],
     });
   }, [setConfig]);
@@ -236,6 +261,10 @@ function SalonReceptionistComponent() {
       
       const bookAppointmentCall = toolCall.functionCalls.find(
         (fc) => fc.name === bookAppointmentDeclaration.name
+      );
+      
+      const cancelAppointmentCall = toolCall.functionCalls.find(
+        (fc) => fc.name === cancelAppointmentDeclaration.name
       );
       
       if (checkAvailabilityCall) {
@@ -362,6 +391,84 @@ function SalonReceptionistComponent() {
             id: bookAppointmentCall.id,
           }],
         });
+      } else if (cancelAppointmentCall) {
+        const args = cancelAppointmentCall.args as {
+          customer_name: string;
+          date?: string;
+          time?: string;
+        };
+        
+        let response: any;
+        
+        // Process date input if provided
+        const dateToCancel = args.date ? processDateInput(args.date) : undefined;
+        
+        // Find the appointment(s) by customer name
+        let appointmentsToCancel = appointments.filter(app => 
+          app.customerName.toLowerCase().includes(args.customer_name.toLowerCase())
+        );
+        
+        // Further filter by date if provided
+        if (dateToCancel) {
+          appointmentsToCancel = appointmentsToCancel.filter(app => app.date === dateToCancel);
+        }
+        
+        // Further filter by time if provided
+        if (args.time) {
+          appointmentsToCancel = appointmentsToCancel.filter(app => app.time === args.time);
+        }
+        
+        if (appointmentsToCancel.length === 0) {
+          // No appointments found
+          response = {
+            success: false,
+            message: `Sorry, no appointments found for ${args.customer_name}${dateToCancel ? ` on ${formatDate(dateToCancel)}` : ''}${args.time ? ` at ${args.time}` : ''}.`
+          };
+        } else if (appointmentsToCancel.length > 1 && !dateToCancel && !args.time) {
+          // Multiple appointments found without date/time specified
+          response = {
+            success: false,
+            multiple_appointments: true,
+            customer_name: args.customer_name,
+            appointments: appointmentsToCancel.map(app => ({
+              date: app.date,
+              formatted_date: formatDate(app.date),
+              time: app.time,
+              service: app.service
+            })),
+            message: `${args.customer_name} has multiple appointments. Please specify a date or time to identify which one to cancel.`
+          };
+        } else {
+          // Cancel the appointment (first one if multiple match the filters)
+          const appointmentToCancel = appointmentsToCancel[0];
+          
+          // Remove the appointment
+          setAppointments(prevAppointments => 
+            prevAppointments.filter(app => app.id !== appointmentToCancel.id)
+          );
+          
+          setCheckedDate(appointmentToCancel.date);
+          
+          // Create success response
+          response = {
+            success: true,
+            cancelled_appointment: appointmentToCancel,
+            message: `Successfully cancelled the appointment for ${appointmentToCancel.customerName} on ${formatDate(appointmentToCancel.date)} at ${appointmentToCancel.time} for ${appointmentToCancel.service}.`
+          };
+        }
+        
+        // Reset other results to show cancellation result
+        setLastAvailabilityCheck(null);
+        setLastBookingResult(null);
+        setLastCancellationResult(response);
+        
+        // Send response back to the model
+        client.sendToolResponse({
+          functionResponses: [{
+            response: response,
+            id: cancelAppointmentCall.id,
+          }],
+        });
       }
     };
     
@@ -373,7 +480,7 @@ function SalonReceptionistComponent() {
   
   return (
     <div className="salon-receptionist">
-      {lastAvailabilityCheck && !lastBookingResult && (
+      {lastAvailabilityCheck && !lastBookingResult && !lastCancellationResult && (
         <div className="availability-results">
           <h3>Last Availability Check</h3>
           <div className="result-content">
@@ -413,7 +520,7 @@ function SalonReceptionistComponent() {
         </div>
       )}
       
-      {lastBookingResult && (
+      {lastBookingResult && !lastCancellationResult && (
         <div className={`booking-results ${lastBookingResult.success ? 'success' : 'error'}`}>
           <h3>Booking Result</h3>
           <div className="result-content">
@@ -424,6 +531,36 @@ function SalonReceptionistComponent() {
                 <p>Date: <strong>{formatDate(lastBookingResult.appointment.date)}</strong></p>
                 <p>Time: <strong>{lastBookingResult.appointment.time}</strong></p>
                 <p>Service: <strong>{lastBookingResult.appointment.service}</strong></p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {lastCancellationResult && (
+        <div className={`cancellation-results ${lastCancellationResult.success ? 'success' : 'error'}`}>
+          <h3>Cancellation Result</h3>
+          <div className="result-content">
+            <p className="result-message">{lastCancellationResult.message}</p>
+            {lastCancellationResult.success && lastCancellationResult.cancelled_appointment && (
+              <div className="cancelled-appointment-details">
+                <p>Cancelled appointment details:</p>
+                <p>Customer: <strong>{lastCancellationResult.cancelled_appointment.customerName}</strong></p>
+                <p>Date: <strong>{formatDate(lastCancellationResult.cancelled_appointment.date)}</strong></p>
+                <p>Time: <strong>{lastCancellationResult.cancelled_appointment.time}</strong></p>
+                <p>Service: <strong>{lastCancellationResult.cancelled_appointment.service}</strong></p>
+              </div>
+            )}
+            {lastCancellationResult.multiple_appointments && lastCancellationResult.appointments && (
+              <div className="multiple-appointments">
+                <p>Please specify which appointment to cancel:</p>
+                <ul>
+                  {lastCancellationResult.appointments.map((app: any, index: number) => (
+                    <li key={index}>
+                      <p>{app.formatted_date} at {app.time} - {app.service}</p>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

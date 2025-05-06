@@ -8,6 +8,7 @@ The Live API Web Console is a React-based web application that provides a real-t
 - Text-based conversation
 - Video/screen capture capabilities
 - Calendar visualization for demonstration purposes
+- Function calling capabilities for appointment booking and management
 
 ## Directory Structure
 
@@ -55,7 +56,9 @@ The Live API Web Console is a React-based web application that provides a real-t
 
 - **ControlTray** (`src/components/control-tray/ControlTray.tsx`): UI controls for managing audio, video, and connection settings.
 
-- **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`): Demo component showing an interactive calendar for a nail salon.
+- **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`): Interactive calendar showing weekly time slots and appointment details.
+
+- **SalonReceptionist** (`src/components/salon-receptionist/SalonReceptionist.tsx`): Demonstration of function calling capabilities for a salon booking system, with appointment availability checks, booking, and cancellation.
 
 - **Logger** (`src/components/logger/Logger.tsx`): Displays logs of API activity.
 
@@ -64,6 +67,18 @@ The Live API Web Console is a React-based web application that provides a real-t
 - **Zustand Store** (`src/lib/store-logger.ts`): Manages logging state using Zustand.
 
 - **React Context**: Used for providing access to the LiveAPI client throughout the app.
+
+## Demo Features
+
+### Salon Appointment System
+
+The salon appointment system showcases Gemini's function calling capabilities with:
+
+1. **Availability Checking**: Search for open time slots by date or across the week
+2. **Appointment Booking**: Book appointments with customer name, date, time, and service
+3. **Appointment Cancellation**: Cancel appointments using customer name, with disambiguation when needed
+
+All functions include natural language processing for inputs like "today", "tomorrow", and day names.
 
 ## Data Flow
 
@@ -79,6 +94,11 @@ The Live API Web Console is a React-based web application that provides a real-t
    - Text inputs are sent to the API via the client
    - Responses are displayed in the SidePanel
 
+4. **Function Calling**:
+   - AI recognizes when to invoke salon functions based on user requests
+   - Function responses are processed and displayed in the UI
+   - Calendar updates in real-time to reflect changes
+
 ## Type System
 
 The application uses TypeScript throughout with comprehensive type definitions in `src/multimodal-live-types.ts` for:
@@ -87,6 +107,7 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - Client configuration
 - Model responses
 - Tool calls
+- Appointment data structures
 
 ## Key Interactions
 
@@ -94,6 +115,7 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - **Audio Processing**: Bidirectional streaming through AudioStreamer and AudioRecorder
 - **UI Controls**: Managed via ControlTray component
 - **Conversations**: Handled through SidePanel component
+- **Appointment Management**: Handled via SalonReceptionist component with function calling
 
 ## Design Patterns
 
@@ -101,3 +123,4 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - **React Context**: For global state and service provision
 - **Custom Hooks**: For encapsulating complex behavior
 - **Type Guards**: For runtime type safety when handling API responses
+- **Function Calling**: For structured interaction between the AI and the application
