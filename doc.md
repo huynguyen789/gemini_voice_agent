@@ -561,6 +561,7 @@ Parameters:
 - `date`: Date for the appointment
 - `time`: Time slot in HH:MM format
 - `customerName`: Name of the customer
+- `phoneNumber`: Customer's phone number (required)
 - `service`: Service being booked
 - `technician` (optional): Preferred technician for the service
 
@@ -608,6 +609,7 @@ type Appointment = {
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
   customerName: string;
+  phoneNumber: string;
   service: string;
   technician?: string; // Optional preferred technician
 };
@@ -673,3 +675,50 @@ You are a receptionist from Madison Valgari Nails Salon...
   });
 }, []);
 ```
+
+## Key Update: Phone Number Collection for Bookings
+
+- The `book_appointment` function now requires a `phone_number` parameter (string).
+- The `Appointment` type includes a `phoneNumber` field.
+- Phone numbers are displayed in all relevant UI components (calendar, booking/cancellation results, lists).
+- System instructions require the AI to always collect a phone number for bookings.
+
+## Example: Book Appointment Declaration
+```typescript
+const bookAppointmentDeclaration: FunctionDeclaration = {
+  name: "book_appointment",
+  description: "Books an appointment in the nail salon calendar",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      date: { type: SchemaType.STRING, description: "Date in YYYY-MM-DD format." },
+      time: { type: SchemaType.STRING, description: "Time in HH:MM format." },
+      customerName: { type: SchemaType.STRING, description: "Customer name." },
+      phoneNumber: { type: SchemaType.STRING, description: "Customer's phone number (required)." },
+      service: { type: SchemaType.STRING, description: "Service name." },
+      technician: { type: SchemaType.STRING, description: "Preferred technician (optional)." }
+    },
+    required: ["date", "time", "customerName", "phoneNumber", "service"]
+  }
+};
+```
+
+## Example: Appointment Type
+```typescript
+type Appointment = {
+  id: number;
+  date: string;
+  time: string;
+  customerName: string;
+  phoneNumber: string;
+  service: string;
+  technician?: string;
+};
+```
+
+## UI/UX
+- Phone numbers are shown in appointment details, calendar slots, and lists in a compact, readable format.
+- System prompt instructs the AI to always ask for and validate a phone number when booking.
+
+## Summary
+- Phone number is now a required part of the booking flow, stored and displayed throughout the app for confirmations and reminders.

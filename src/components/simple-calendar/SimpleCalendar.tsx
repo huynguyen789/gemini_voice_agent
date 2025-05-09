@@ -12,6 +12,7 @@ export type Appointment = {
   time: string; // HH:MM
   customerName: string;
   service: string;
+  phoneNumber: string; // Customer phone number
   technician?: string; // Optional technician name
 };
 
@@ -52,13 +53,13 @@ const timeSlots = [
 
 // Default appointments (pre-populated for demo)
 const defaultAppointments: Appointment[] = [
-  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure" },
-  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure" },
-  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions" },
-  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure" },
-  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure" },
-  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint" },
-  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination" },
+  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure", phoneNumber: "(555) 123-4567" },
+  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure", phoneNumber: "(555) 234-5678" },
+  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions", phoneNumber: "(555) 345-6789" },
+  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure", phoneNumber: "(555) 456-7890" },
+  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure", phoneNumber: "(555) 567-8901" },
+  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint", phoneNumber: "(555) 678-9012" },
+  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination", phoneNumber: "(555) 789-0123" },
 ];
 
 // Props type for the component
@@ -135,6 +136,7 @@ export function SimpleCalendar({
                       <div className="appointment-info">
                         <div className="customer">{appointment.customerName}</div>
                         <div className="service">{appointment.service}</div>
+                        <div className="phone">{appointment.phoneNumber}</div>
                         {appointment.technician && (
                           <div className="technician">with {appointment.technician}</div>
                         )}
@@ -178,6 +180,7 @@ export function SimpleCalendar({
                 <div className="appointment-customer">{appointment.customerName}</div>
                 <div className="appointment-date">{appointment.date} at {appointment.time}</div>
                 <div className="appointment-service">{appointment.service}</div>
+                <div className="appointment-phone">📱 {appointment.phoneNumber}</div>
                 {appointment.technician && (
                   <div className="appointment-technician">Technician: {appointment.technician}</div>
                 )}

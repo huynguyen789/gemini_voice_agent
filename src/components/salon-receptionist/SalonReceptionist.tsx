@@ -45,13 +45,13 @@ const timeSlots = [
 
 // Initial appointments (pre-populated for demo)
 const initialAppointments: Appointment[] = [
-  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure" },
-  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure" },
-  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions" },
-  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure" },
-  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure" },
-  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint" },
-  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination" },
+  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure", phoneNumber: "(555) 123-4567" },
+  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure", phoneNumber: "(555) 234-5678" },
+  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions", phoneNumber: "(555) 345-6789" },
+  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure", phoneNumber: "(555) 456-7890" },
+  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure", phoneNumber: "(555) 567-8901" },
+  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint", phoneNumber: "(555) 678-9012" },
+  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination", phoneNumber: "(555) 789-0123" },
 ];
 
 // Function declarations
@@ -93,6 +93,10 @@ const bookAppointmentDeclaration: FunctionDeclaration = {
         type: SchemaType.STRING,
         description: "Name of the customer making the appointment."
       },
+      phoneNumber: {
+        type: SchemaType.STRING,
+        description: "Customer's phone number (required for booking confirmation and reminders)."
+      },
       service: {
         type: SchemaType.STRING,
         description: "The service the customer is booking (e.g., Gel Manicure, Pedicure, etc.)."
@@ -102,7 +106,7 @@ const bookAppointmentDeclaration: FunctionDeclaration = {
         description: "Optional. The preferred technician for the service. Available technicians: Hana, Zoey, Camila, Caylie, Cammy, Steve."
       }
     },
-    required: ["date", "time", "customerName", "service"]
+    required: ["date", "time", "customerName", "phoneNumber", "service"]
   }
 };
 
@@ -370,7 +374,14 @@ LASHES & BROWS:
 FACIALS:
 - Facial: $70 (One-hour treatment including exfoliating, cleansing, extraction, massage, hydrating mask, and sunscreen)
 
-Use the check_availability function when clients ask about available appointments, book_appointment function when they want to book an appointment, and cancel_appointment function when they want to cancel an existing appointment. Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.
+Use the check_availability function when clients ask about available appointments, book_appointment function when they want to book an appointment, and cancel_appointment function when they want to cancel an existing appointment. 
+
+BOOKING REQUIREMENTS:
+- Always ask for and collect the client's phone number when booking an appointment. This is required for booking confirmations and appointment reminders.
+- A valid phone number should be in the format (XXX) XXX-XXXX, XXX-XXX-XXXX, or without formatting.
+- If a client doesn't provide a phone number initially, kindly ask for it before completing the booking.
+
+Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.
 
 If the client doesn't have any nails currently, recommend Gel X as a simple, healthy option.
 
@@ -476,6 +487,7 @@ If a client asks something you're not sure about, state that you need to check w
           date: string;
           time: string;
           customerName: string;
+          phoneNumber: string;
           service: string;
           technician?: string;
         };
@@ -495,6 +507,7 @@ If a client asks something you're not sure about, state that you need to check w
             date: dateToBook,
             time: args.time,
             customerName: args.customerName,
+            phoneNumber: args.phoneNumber,
             service: args.service,
             technician: args.technician || undefined
           };
@@ -508,7 +521,7 @@ If a client asks something you're not sure about, state that you need to check w
           response = {
             success: true,
             appointment: newAppointment,
-            message: `Successfully booked an appointment for ${args.customerName} on ${formatDate(dateToBook)} at ${args.time} for ${args.service}${args.technician ? ` with ${args.technician}` : ''}.`
+            message: `Successfully booked an appointment for ${args.customerName} on ${formatDate(dateToBook)} at ${args.time} for ${args.service}${args.technician ? ` with ${args.technician}` : ''}. Confirmation details will be sent to ${args.phoneNumber}.`
           };
         } else {
           // Create error response
@@ -571,6 +584,7 @@ If a client asks something you're not sure about, state that you need to check w
               formatted_date: formatDate(app.date),
               time: app.time,
               service: app.service,
+              phoneNumber: app.phoneNumber,
               technician: app.technician
             })),
             message: `${args.customer_name} has multiple appointments. Please specify a date or time to identify which one to cancel.`
@@ -665,6 +679,7 @@ If a client asks something you're not sure about, state that you need to check w
             {lastBookingResult.success && lastBookingResult.appointment && (
               <div className="appointment-details">
                 <p>Customer: <strong>{lastBookingResult.appointment.customerName}</strong></p>
+                <p>Phone: <strong>📱 {lastBookingResult.appointment.phoneNumber}</strong></p>
                 <p>Date: <strong>{formatDate(lastBookingResult.appointment.date)}</strong></p>
                 <p>Time: <strong>{lastBookingResult.appointment.time}</strong></p>
                 <p>Service: <strong>{lastBookingResult.appointment.service}</strong></p>
@@ -686,6 +701,7 @@ If a client asks something you're not sure about, state that you need to check w
               <div className="cancelled-appointment-details">
                 <p>Cancelled appointment details:</p>
                 <p>Customer: <strong>{lastCancellationResult.cancelled_appointment.customerName}</strong></p>
+                <p>Phone: <strong>📱 {lastCancellationResult.cancelled_appointment.phoneNumber}</strong></p>
                 <p>Date: <strong>{formatDate(lastCancellationResult.cancelled_appointment.date)}</strong></p>
                 <p>Time: <strong>{lastCancellationResult.cancelled_appointment.time}</strong></p>
                 <p>Service: <strong>{lastCancellationResult.cancelled_appointment.service}</strong></p>
@@ -700,7 +716,9 @@ If a client asks something you're not sure about, state that you need to check w
                 <ul>
                   {lastCancellationResult.appointments.map((app: any, index: number) => (
                     <li key={index}>
-                      <p>{app.formatted_date} at {app.time} - {app.service}{app.technician ? ` with ${app.technician}` : ''}</p>
+                      <p>{app.formatted_date} at {app.time} - {app.service}</p>
+                      <p>📱 {app.phoneNumber}</p>
+                      {app.technician && <p>Technician: {app.technician}</p>}
                     </li>
                   ))}
                 </ul>

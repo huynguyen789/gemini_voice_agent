@@ -80,6 +80,16 @@
       
       p {
         margin: 6px 0;
+        
+        &:nth-child(2) {
+          font-size: 14px;
+          color: #555;
+          
+          strong {
+            font-weight: normal;
+            color: #666;
+          }
+        }
       }
     }
   }
@@ -120,6 +130,16 @@
           font-weight: 500;
           color: #ff8f00;
         }
+        
+        &:nth-child(3) {
+          font-size: 14px;
+          color: #555;
+          
+          strong {
+            font-weight: normal;
+            color: #666;
+          }
+        }
       }
     }
     
@@ -153,6 +173,13 @@
           
           p {
             margin: 0;
+            
+            &:nth-child(2) {
+              font-size: 13px;
+              opacity: 0.8;
+              margin-top: 2px;
+              color: #666;
+            }
           }
         }
       }

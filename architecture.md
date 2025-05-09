@@ -1,5 +1,11 @@
 # Live API Web Console Architecture
 
+## Key Update: Phone Number in Bookings
+- All appointment bookings now require a `phoneNumber` (string) field.
+- The `Appointment` type includes `phoneNumber`.
+- Phone numbers are displayed in all relevant UI components (calendar, lists, booking/cancellation results).
+- System prompt instructs the AI to always collect and validate a phone number for every booking.
+
 ## Overview
 
 The Live API Web Console is a React-based web application that provides a real-time interface for interacting with the Gemini API. The application enables:
