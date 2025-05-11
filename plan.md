@@ -3,6 +3,10 @@
 * [X] basic calandar
 * [X] Booking appoinments]
 * [ ] Function to contact manager
+  * [ ] UI
+  * [ ] Function to send message to manager
+  * [ ] Abilitiy for manager to send message back to the AI
+  * [ ] 
 
 Bugs:
 
