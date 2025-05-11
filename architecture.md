@@ -19,6 +19,82 @@
 - Phone numbers are displayed in all relevant UI components (calendar, lists, booking/cancellation results).
 - System prompt instructs the AI to always collect and validate a phone number for every booking.
 
+## Key Update: Phone Number Primary Identifier System
+
+- Phone numbers are now the primary identifier for booking and cancelling appointments
+- Robust phone number normalization system removes formatting characters for consistent matching
+- Two-stage matching strategy: exact match first, then fallback to last 7 digits for partial match
+- Clear feedback in responses about match type and handling of number format differences
+- Comprehensive logging for phone number comparison operations aids in debugging
+- System prompt instructions emphasize phone number collection and verification
+
+The phone number enhancements include:
+
+```typescript
+// Helper function to normalize phone numbers
+const normalizePhoneNumber = (phoneNumber: string): string => {
+  return phoneNumber.replace(/\D/g, '');
+};
+
+// Two-stage matching algorithm
+// 1. Try exact match
+let appointmentsToCancel = appointments.filter(app => {
+  const normalizedAppPhone = normalizePhoneNumber(app.phoneNumber);
+  return normalizedAppPhone === normalizedSearchPhone;
+});
+
+// 2. If no matches, try partial match with last 7 digits
+if (appointmentsToCancel.length === 0 && normalizedSearchPhone.length >= 7) {
+  const lastDigits = normalizedSearchPhone.slice(-7);
+  appointmentsToCancel = appointments.filter(app => {
+    const normalizedAppPhone = normalizePhoneNumber(app.phoneNumber);
+    return normalizedAppPhone.endsWith(lastDigits);
+  });
+}
+```
+
+This implementation effectively handles phone number format variations like parentheses, dashes, spaces, and different area code notations while maintaining an excellent user experience.
+
+## Key Update: Appointment Editing System
+
+- New function `edit_appointment` enables clients to modify their existing appointments
+- Validation system prevents booking conflicts when changing dates/times
+- Comprehensive change tracking with before/after comparison
+- Selective field updating allows modifying only specific appointment details
+- Changes summary provides clear feedback about appointment modifications
+- Integrated with phone number normalization for consistent appointment identification
+- UI enhancements include side-by-side comparison and visual change highlighting
+
+```typescript
+// Edit appointment implementation with validation
+if (isNewTimeSlot) {
+  isSlotAvailable = !appointments.some(app => 
+    app.id !== appointmentToEdit.id && // Skip checking against current appointment
+    app.date === newDate && 
+    app.time === newTime
+  );
+}
+
+// Track specific changes for clearer user feedback
+const changes = [];
+if (newDate !== appointmentToEdit.date) 
+  changes.push(`date from ${formatDate(appointmentToEdit.date)} to ${formatDate(newDate)}`);
+if (newTime !== appointmentToEdit.time) 
+  changes.push(`time from ${appointmentToEdit.time} to ${newTime}`);
+// ... other fields
+
+// The response includes both original and updated details
+response = {
+  success: true,
+  original_appointment: {...},
+  updated_appointment: {...},
+  changes_summary: changes.join(", "),
+  message: `Successfully updated the appointment. Changed ${changes.join(", ")}.`
+};
+```
+
+This feature completes the appointment management lifecycle with operations for checking availability, booking, editing, and cancellation—all using phone numbers as primary identifiers.
+
 ## Overview
 
 The Live API Web Console is a React-based web application that provides a real-time interface for interacting with the Gemini API. The application enables:

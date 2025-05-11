@@ -182,6 +182,50 @@ const sendMessageToManagerDeclaration: FunctionDeclaration = {
   }
 };
 
+// Edit appointment function declaration
+const editAppointmentDeclaration: FunctionDeclaration = {
+  name: "edit_appointment",
+  description: "Edits an existing appointment using phone number as primary identifier",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      phone_number: {
+        type: SchemaType.STRING,
+        description: "Phone number of the customer (primary identifier)"
+      },
+      original_date: {
+        type: SchemaType.STRING,
+        description: "Original date of the appointment (YYYY-MM-DD format)"
+      },
+      original_time: {
+        type: SchemaType.STRING,
+        description: "Original time of the appointment (HH:MM format)"
+      },
+      new_date: {
+        type: SchemaType.STRING,
+        description: "New date for the appointment (optional)"
+      },
+      new_time: {
+        type: SchemaType.STRING,
+        description: "New time for the appointment (optional)"
+      },
+      new_service: {
+        type: SchemaType.STRING,
+        description: "New service for the appointment (optional)"
+      },
+      new_technician: {
+        type: SchemaType.STRING,
+        description: "New technician for the appointment (optional)"
+      },
+      customer_name: {
+        type: SchemaType.STRING,
+        description: "Customer name for confirmation (optional)"
+      }
+    },
+    required: ["phone_number", "original_date", "original_time"]
+  }
+};
+
 // Helper functions for date handling
 const processDateInput = (dateInput: string): string => {
   if (!dateInput) return '';
@@ -306,6 +350,7 @@ function SalonReceptionistComponent() {
   const [lastAvailabilityCheck, setLastAvailabilityCheck] = useState<any | null>(null);
   const [lastBookingResult, setLastBookingResult] = useState<any | null>(null);
   const [lastCancellationResult, setLastCancellationResult] = useState<any | null>(null);
+  const [lastEditResult, setLastEditResult] = useState<any | null>(null);
   const [managerMessages, setManagerMessages] = useState<ManagerMessage[]>([]);
   const [showManagerInbox, setShowManagerInbox] = useState<boolean>(false);
   const [lastManagerMessage, setLastManagerMessage] = useState<ManagerMessage | null>(null);
@@ -380,16 +425,10 @@ You are a receptionist from Madison Valgari Nails Salon. Your task is helping an
 
 
 GENERAL RULES:
-- Always use the check_availability function before asking more details about the appointment. Dont need phone number to check availability.
-
+- Always use the check_availability function before asking more details about the appointment.
 BOOKING:
-- First, check availability using the check_availability function. Then ask for service details. Then technician preference. Then phone number, name. Make sure to have all of the info, before booking the appointment using the book_appointment function.
 - MAKE SURE TO CALL THE book_appointment function to book the appointment!
 - If client ask for 2 services, input them in the same api call, not 2 separate ones.
-- Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.
-- If the client doesn't have any nails currently, recommend Gel X as a simple, healthy option.
-- If a client asks something you're not sure about, state that you need to check with the manager.
-
 
 - Use the check_availability function when clients ask about available appointments, 
 book_appointment function when they want to book an appointment, 
@@ -407,7 +446,6 @@ MANAGER COMMUNICATION:
 - When sending a message to the manager, be detailed about the client request and reason for escalation.
 - If the manager has responded to a previous message, incorporate their guidance into your response to the client.
 
-
 IMPORTANT: When booking or canceling appointments, always use phone numbers as the primary identifier. Phone numbers are more unique than names and help prevent confusion between customers with the same or similar names. Always collect a phone number when booking and ask for a phone number first when canceling appointments.
 
 BOOKING PROCESS:
@@ -420,6 +458,25 @@ CANCELLATION PROCESS:
 1. Always ask for the customer's phone number first
 2. Use the phone number with cancel_appointment function
 3. If multiple appointments are found for the same phone number, collect date/time to identify the correct one
+
+APPOINTMENT EDITING PROCESS:
+- When clients want to change an existing appointment, use the edit_appointment function.
+- Always identify the appointment using the phone number first.
+- Confirm which specific appointment to edit using original date and time.
+- Clearly specify only the aspects of the appointment that need changing (date, time, service, or technician).
+- Verify the new time slot is available before making changes.
+- After editing, summarize the changes made to confirm with the client.
+
+BOOKING REQUIREMENTS:
+- Always ask for and collect the client's phone number when booking an appointment. This is required for booking confirmations and appointment reminders.
+- A valid phone number should be in the format (XXX) XXX-XXXX, XXX-XXX-XXXX, or without formatting.
+- If a client doesn't provide a phone number initially, kindly ask for it before completing the booking.
+
+Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.
+
+If the client doesn't have any nails currently, recommend Gel X as a simple, healthy option.
+
+If a client asks something you're not sure about, state that you need to check with the manager.
 
 
 SALON INFORMATION:
@@ -458,8 +515,6 @@ POLICIES:
 - If there are two no-shows, a $25 deposit is required for the next appointment
 - No refunds or redos after the client leaves the facility
 - Gratuity can be placed on cards or via payment apps (Venmo, CashApp, Zelle)
-
-
 
 DETAILED SERVICE MENU:
 
@@ -551,7 +606,7 @@ FACIALS:
         ],
       },
       tools: [
-        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration, cancelAppointmentDeclaration, sendMessageToManagerDeclaration] },
+        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration, cancelAppointmentDeclaration, sendMessageToManagerDeclaration, editAppointmentDeclaration] },
       ],
     });
   }, [setConfig]);
@@ -575,6 +630,10 @@ FACIALS:
       
       const sendMessageToManagerCall = toolCall.functionCalls.find(
         (fc) => fc.name === sendMessageToManagerDeclaration.name
+      );
+      
+      const editAppointmentCall = toolCall.functionCalls.find(
+        (fc) => fc.name === editAppointmentDeclaration.name
       );
       
       if (checkAvailabilityCall) {
@@ -944,6 +1003,144 @@ FACIALS:
             id: sendMessageToManagerCall.id,
           }],
         });
+      } else if (editAppointmentCall) {
+        const args = editAppointmentCall.args as {
+          phone_number: string;
+          original_date: string;
+          original_time: string;
+          new_date?: string;
+          new_time?: string;
+          new_service?: string;
+          new_technician?: string;
+          customer_name?: string;
+        };
+        
+        console.log("=== EDIT APPOINTMENT REQUEST ===");
+        console.log("Phone:", args.phone_number);
+        console.log("Original Date:", args.original_date);
+        console.log("Original Time:", args.original_time);
+        console.log("New Date:", args.new_date || "Not specified");
+        console.log("New Time:", args.new_time || "Not specified");
+        console.log("New Service:", args.new_service || "Not specified");
+        console.log("New Technician:", args.new_technician || "Not specified");
+        console.log("Customer Name:", args.customer_name || "Not specified");
+        
+        let response: any;
+        
+        // Normalize phone number for better matching
+        const normalizedSearchPhone = normalizePhoneNumber(args.phone_number);
+        
+        // Find the appointment to edit
+        const appointmentToEdit = appointments.find(app => 
+          normalizePhoneNumber(app.phoneNumber) === normalizedSearchPhone &&
+          app.date === args.original_date &&
+          app.time === args.original_time
+        );
+        
+        if (!appointmentToEdit) {
+          response = {
+            success: false,
+            message: `Sorry, no appointment found for phone number ${args.phone_number} on ${formatDate(args.original_date)} at ${args.original_time}.`
+          };
+        } else {
+          // Check if there are actually any changes to make
+          const newDate = args.new_date || appointmentToEdit.date;
+          const newTime = args.new_time || appointmentToEdit.time;
+          const newService = args.new_service || appointmentToEdit.service;
+          const newTechnician = args.new_technician || appointmentToEdit.technician;
+          
+          const hasChanges = 
+            newDate !== appointmentToEdit.date || 
+            newTime !== appointmentToEdit.time || 
+            newService !== appointmentToEdit.service || 
+            newTechnician !== appointmentToEdit.technician;
+          
+          if (!hasChanges) {
+            response = {
+              success: false,
+              message: "No changes were specified for the appointment."
+            };
+          } else {
+            // Check if the new time slot is available (only if date or time is changing)
+            const isNewTimeSlot = newDate !== appointmentToEdit.date || newTime !== appointmentToEdit.time;
+            let isSlotAvailable = true;
+            
+            if (isNewTimeSlot) {
+              isSlotAvailable = !appointments.some(app => 
+                app.id !== appointmentToEdit.id && // Skip checking against the current appointment
+                app.date === newDate && 
+                app.time === newTime
+              );
+            }
+            
+            if (isNewTimeSlot && !isSlotAvailable) {
+              response = {
+                success: false,
+                message: `Sorry, the requested time slot on ${formatDate(newDate)} at ${newTime} is already booked.`
+              };
+            } else {
+              // Create a changes summary for the response
+              const changes = [];
+              if (newDate !== appointmentToEdit.date) changes.push(`date from ${formatDate(appointmentToEdit.date)} to ${formatDate(newDate)}`);
+              if (newTime !== appointmentToEdit.time) changes.push(`time from ${appointmentToEdit.time} to ${newTime}`);
+              if (newService !== appointmentToEdit.service) changes.push(`service from ${appointmentToEdit.service} to ${newService}`);
+              if (newTechnician !== appointmentToEdit.technician) {
+                const oldTech = appointmentToEdit.technician || "no specific technician";
+                const newTech = newTechnician || "no specific technician";
+                changes.push(`technician from ${oldTech} to ${newTech}`);
+              }
+              
+              // Update the appointment
+              const updatedAppointment: Appointment = {
+                ...appointmentToEdit,
+                date: newDate,
+                time: newTime,
+                service: newService,
+                technician: newTechnician
+              };
+              
+              // Update the appointments list
+              setAppointments(prevAppointments => 
+                prevAppointments.map(app => 
+                  app.id === appointmentToEdit.id ? updatedAppointment : app
+                )
+              );
+              
+              setCheckedDate(updatedAppointment.date);
+              
+              // Create success response
+              response = {
+                success: true,
+                original_appointment: {
+                  date: appointmentToEdit.date,
+                  time: appointmentToEdit.time,
+                  service: appointmentToEdit.service,
+                  technician: appointmentToEdit.technician,
+                  customerName: appointmentToEdit.customerName,
+                  phoneNumber: appointmentToEdit.phoneNumber
+                },
+                updated_appointment: updatedAppointment,
+                changes_summary: changes.join(", "),
+                message: `Successfully updated the appointment for ${updatedAppointment.customerName}. Changed ${changes.join(", ")}.`
+              };
+            }
+          }
+        }
+        
+        // Update state to show the edit result
+        setLastAvailabilityCheck(null);
+        setLastBookingResult(null);
+        setLastCancellationResult(null);
+        setLastEditResult(response);
+        setLastManagerMessage(null);
+        
+        // Send response back to the model
+        client.sendToolResponse({
+          functionResponses: [{
+            response: response,
+            id: editAppointmentCall.id,
+          }],
+        });
       }
     };
     
@@ -1159,6 +1356,51 @@ FACIALS:
                   ))}
                 </ul>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {lastEditResult && (
+        <div className={`edit-results ${lastEditResult.success ? 'success' : 'error'}`}>
+          <h3>Appointment Edit Result</h3>
+          <div className="result-content">
+            <p className="result-message">{lastEditResult.message}</p>
+            
+            {lastEditResult.success && lastEditResult.updated_appointment && (
+              <>
+                <div className="appointment-comparison">
+                  <div className="original-appointment">
+                    <h4>Original Appointment</h4>
+                    <p>Customer: <strong>{lastEditResult.original_appointment.customerName}</strong></p>
+                    <p>Phone: <strong>📱 {lastEditResult.original_appointment.phoneNumber}</strong></p>
+                    <p>Date: <strong>{formatDate(lastEditResult.original_appointment.date)}</strong></p>
+                    <p>Time: <strong>{lastEditResult.original_appointment.time}</strong></p>
+                    <p>Service: <strong>{lastEditResult.original_appointment.service}</strong></p>
+                    {lastEditResult.original_appointment.technician && (
+                      <p>Technician: <strong>{lastEditResult.original_appointment.technician}</strong></p>
+                    )}
+                  </div>
+                  
+                  <div className="arrow">→</div>
+                  
+                  <div className="updated-appointment">
+                    <h4>Updated Appointment</h4>
+                    <p>Customer: <strong>{lastEditResult.updated_appointment.customerName}</strong></p>
+                    <p>Phone: <strong>📱 {lastEditResult.updated_appointment.phoneNumber}</strong></p>
+                    <p>Date: <strong>{formatDate(lastEditResult.updated_appointment.date)}</strong></p>
+                    <p>Time: <strong>{lastEditResult.updated_appointment.time}</strong></p>
+                    <p>Service: <strong>{lastEditResult.updated_appointment.service}</strong></p>
+                    {lastEditResult.updated_appointment.technician && (
+                      <p>Technician: <strong>{lastEditResult.updated_appointment.technician}</strong></p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="changes-summary">
+                  <p><strong>Changes Made:</strong> {lastEditResult.changes_summary}</p>
+                </div>
+              </>
             )}
           </div>
         </div>

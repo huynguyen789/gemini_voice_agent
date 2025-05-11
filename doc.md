@@ -967,12 +967,59 @@ You are a receptionist from Madison Valgari Nails Salon...
 }, []);
 ```
 
-## Key Update: Phone Number Collection for Bookings
+## Key Update: Phone Number as Primary Identifier for Appointment Management
 
-- The `book_appointment` function now requires a `phone_number` parameter (string).
-- The `Appointment` type includes a `phoneNumber` field.
-- Phone numbers are displayed in all relevant UI components (calendar, booking/cancellation results, lists).
-- System instructions require the AI to always collect a phone number for bookings.
+The salon appointment system now uses phone numbers as the primary identifier for booking and cancelling appointments:
+
+### Phone Number Handling Implementation
+
+1. **Normalized Phone Number Matching**:
+   - All phone numbers are normalized by removing non-digit characters (`(`, `)`, `-`, spaces)
+   - System performs two-stage matching:
+     * Exact matching on normalized numbers
+     * Fallback to partial matching using last 7 digits if no exact match found
+
+2. **Function Declaration Update**:
+   ```typescript
+   const cancelAppointmentDeclaration: FunctionDeclaration = {
+     name: "cancel_appointment",
+     description: "Cancels an existing appointment using phone number as primary identifier",
+     parameters: {
+       properties: {
+         phone_number: {
+           type: SchemaType.STRING,
+           description: "Phone number of the customer (primary identifier)."
+         },
+         customer_name: {
+           type: SchemaType.STRING,
+           description: "Optional. Name of the customer for confirmation."
+         },
+         // Other parameters...
+       },
+       required: ["phone_number"]
+     }
+   };
+   ```
+
+3. **Match Type Tracking**:
+   - System tracks whether matches are found through exact or partial matching
+   - Provides clear feedback in the response when partial matching is used
+
+4. **System Instructions**:
+   The AI prompt now emphasizes phone number usage:
+   ```
+   IMPORTANT: When booking or canceling appointments, always use phone numbers 
+   as the primary identifier. Phone numbers are more unique than names and help 
+   prevent confusion between customers with similar names.
+
+   CANCELLATION PROCESS:
+   1. Always ask for the customer's phone number first
+   2. Use the phone number with cancel_appointment function
+   3. If multiple appointments are found for the same phone number, 
+      collect date/time to identify the correct one
+   ```
+
+This implementation ensures the system can handle different phone number formats (e.g., "555-123-4567", "(555) 123-4567", "5551234567") and still identify the correct appointment, reducing errors caused by duplicate or similar customer names.
 
 ## Example: Book Appointment Declaration
 ```typescript
@@ -1013,3 +1060,76 @@ type Appointment = {
 
 ## Summary
 - Phone number is now a required part of the booking flow, stored and displayed throughout the app for confirmations and reminders.
+
+## Key Update: Appointment Editing Functionality
+
+The salon appointment system now supports appointment editing, allowing clients to modify their existing appointments:
+
+### Edit Appointment Implementation
+
+1. **Function Declaration**:
+   ```typescript
+   const editAppointmentDeclaration: FunctionDeclaration = {
+     name: "edit_appointment",
+     description: "Edits an existing appointment using phone number as primary identifier",
+     parameters: {
+       properties: {
+         phone_number: {
+           type: SchemaType.STRING,
+           description: "Phone number of the customer (primary identifier)"
+         },
+         original_date: {
+           type: SchemaType.STRING,
+           description: "Original date of the appointment (YYYY-MM-DD format)"
+         },
+         original_time: {
+           type: SchemaType.STRING,
+           description: "Original time of the appointment (HH:MM format)"
+         },
+         new_date: {
+           type: SchemaType.STRING,
+           description: "New date for the appointment (optional)"
+         },
+         new_time: {
+           type: SchemaType.STRING,
+           description: "New time for the appointment (optional)"
+         },
+         new_service: {
+           type: SchemaType.STRING,
+           description: "New service for the appointment (optional)"
+         },
+         new_technician: {
+           type: SchemaType.STRING,
+           description: "New technician for the appointment (optional)"
+         }
+       },
+       required: ["phone_number", "original_date", "original_time"]
+     }
+   };
+   ```
+
+2. **Key Features**:
+   - Uses phone number as primary identifier to locate appointments
+   - Provides specific parameters for original appointment details
+   - Only requires parameters for fields that need to be changed
+   - Validates availability of new time slots before making changes
+   - Returns both original and updated appointment details
+
+3. **System Instructions**:
+   ```
+   APPOINTMENT EDITING PROCESS:
+   - When clients want to change an existing appointment, use the edit_appointment function.
+   - Always identify the appointment using the phone number first.
+   - Confirm which specific appointment to edit using original date and time.
+   - Clearly specify only the aspects of the appointment that need changing.
+   - Verify the new time slot is available before making changes.
+   - After editing, summarize the changes made to confirm with the client.
+   ```
+
+4. **Enhanced UI**:
+   - Side-by-side comparison of original and updated appointment details
+   - Clear visual highlighting of changed fields
+   - Summary of specific changes made
+   - Consistent styling with other appointment operations
+
+This implementation ensures seamless modification of appointments while maintaining the integrity of the booking system and preserving the phone number as the primary identifier.
