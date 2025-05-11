@@ -1,8 +1,8 @@
 /**
- * Simple calendar component for salon appointment scheduling
- * Shows a one-week calendar with available and booked slots
+ * Enhanced calendar component for salon appointment scheduling
+ * Shows a weekly calendar with navigation controls and available/booked slots
  */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./simple-calendar.scss";
 
 // Types for our calendar data
@@ -16,18 +16,16 @@ export type Appointment = {
   technician?: string; // Optional technician name
 };
 
-// Get the dates for this week (Monday-Sunday)
-const getWeekDates = (): { date: string, label: string }[] => {
-  const today = new Date();
-  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday...
-  
-  // Calculate the Monday of this week
-  const startDate = new Date(today);
-  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1;
-  startDate.setDate(today.getDate() - daysSinceMonday);
-  
-  // Generate array of dates for the week
+// Types for our enhanced calendar state
+export type CalendarState = {
+  currentDate: string; // YYYY-MM-DD of selected date
+  weekStartDate: Date; // Date object of the week's start (Monday)
+};
+
+// Get dates for a specific week (Monday-Sunday) based on starting Monday
+const getWeekDates = (startDate: Date): { date: string, label: string }[] => {
   const weekDates = [];
+  
   for (let i = 0; i < 7; i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
@@ -46,6 +44,41 @@ const getWeekDates = (): { date: string, label: string }[] => {
   return weekDates;
 };
 
+// Calculate the Monday of the current week
+const getMondayOfCurrentWeek = (): Date => {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday...
+  
+  const startDate = new Date(today);
+  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1;
+  startDate.setDate(today.getDate() - daysSinceMonday);
+  
+  // Reset hours to beginning of the day to avoid time issues
+  startDate.setHours(0, 0, 0, 0);
+  
+  return startDate;
+};
+
+// Format date to a readable string (MM/DD/YYYY)
+const formatDateString = (date: Date): string => {
+  const month = date.toLocaleString('default', { month: 'long' });
+  const day = date.getDate();
+  const year = date.getFullYear();
+  
+  return `${month} ${day}, ${year}`;
+};
+
+// Format date string in YYYY-MM-DD format to human-readable format
+const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+};
+
 // Available time slots (9AM to 5PM)
 const timeSlots = [
   "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
@@ -53,13 +86,13 @@ const timeSlots = [
 
 // Default appointments (pre-populated for demo)
 const defaultAppointments: Appointment[] = [
-  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure", phoneNumber: "(555) 123-4567" },
-  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure", phoneNumber: "(555) 234-5678" },
-  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions", phoneNumber: "(555) 345-6789" },
-  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure", phoneNumber: "(555) 456-7890" },
-  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure", phoneNumber: "(555) 567-8901" },
-  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint", phoneNumber: "(555) 678-9012" },
-  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination", phoneNumber: "(555) 789-0123" },
+  { id: 1, date: getWeekDates(getMondayOfCurrentWeek())[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure", phoneNumber: "(555) 123-4567" },
+  { id: 2, date: getWeekDates(getMondayOfCurrentWeek())[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure", phoneNumber: "(555) 234-5678" },
+  { id: 3, date: getWeekDates(getMondayOfCurrentWeek())[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions", phoneNumber: "(555) 345-6789" },
+  { id: 4, date: getWeekDates(getMondayOfCurrentWeek())[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure", phoneNumber: "(555) 456-7890" },
+  { id: 5, date: getWeekDates(getMondayOfCurrentWeek())[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure", phoneNumber: "(555) 567-8901" },
+  { id: 6, date: getWeekDates(getMondayOfCurrentWeek())[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint", phoneNumber: "(555) 678-9012" },
+  { id: 7, date: getWeekDates(getMondayOfCurrentWeek())[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination", phoneNumber: "(555) 789-0123" },
 ];
 
 // Props type for the component
@@ -74,8 +107,54 @@ export function SimpleCalendar({
 }: SimpleCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [weekStartDate, setWeekStartDate] = useState<Date>(getMondayOfCurrentWeek());
+  const [weekDates, setWeekDates] = useState<{ date: string, label: string }[]>(getWeekDates(getMondayOfCurrentWeek()));
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
   
-  const weekDates = getWeekDates();
+  // Update week dates when weekStartDate changes
+  useEffect(() => {
+    setWeekDates(getWeekDates(weekStartDate));
+  }, [weekStartDate]);
+  
+  // Navigation functions
+  const goToPreviousWeek = () => {
+    const newStartDate = new Date(weekStartDate);
+    newStartDate.setDate(weekStartDate.getDate() - 7);
+    setWeekStartDate(newStartDate);
+  };
+  
+  const goToNextWeek = () => {
+    const newStartDate = new Date(weekStartDate);
+    newStartDate.setDate(weekStartDate.getDate() + 7);
+    setWeekStartDate(newStartDate);
+  };
+  
+  const goToCurrentWeek = () => {
+    setWeekStartDate(getMondayOfCurrentWeek());
+  };
+  
+  // Month navigation functions
+  const goToPreviousMonth = () => {
+    const newStartDate = new Date(weekStartDate);
+    newStartDate.setMonth(newStartDate.getMonth() - 1);
+    setWeekStartDate(getMondayOfWeek(newStartDate));
+  };
+  
+  const goToNextMonth = () => {
+    const newStartDate = new Date(weekStartDate);
+    newStartDate.setMonth(newStartDate.getMonth() + 1);
+    setWeekStartDate(getMondayOfWeek(newStartDate));
+  };
+  
+  // Helper to get Monday of any week
+  const getMondayOfWeek = (date: Date): Date => {
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    const monday = new Date(date);
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0); // Reset hours to beginning of the day
+    return monday;
+  };
   
   // Check if a slot is booked
   const isSlotBooked = (date: string, time: string): Appointment | undefined => {
@@ -102,10 +181,66 @@ export function SimpleCalendar({
     setSelectedTime(time);
   };
   
+  // Generate week label (e.g., "May 1 - May 7, 2023")
+  const getWeekLabel = (): string => {
+    const weekStart = new Date(weekStartDate);
+    const weekEnd = new Date(weekStartDate);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    
+    const startMonth = weekStart.toLocaleString('default', { month: 'short' });
+    const endMonth = weekEnd.toLocaleString('default', { month: 'short' });
+    
+    const startDay = weekStart.getDate();
+    const endDay = weekEnd.getDate();
+    
+    const year = weekStart.getFullYear();
+    const endYear = weekEnd.getFullYear();
+    
+    if (year === endYear) {
+      if (startMonth === endMonth) {
+        return `${startMonth} ${startDay} - ${endDay}, ${year}`;
+      } else {
+        return `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`;
+      }
+    } else {
+      return `${startMonth} ${startDay}, ${year} - ${endMonth} ${endDay}, ${endYear}`;
+    }
+  };
+  
+  // Check if the displayed week is the current week
+  const isCurrentWeek = (): boolean => {
+    const currentMonday = getMondayOfCurrentWeek();
+    return (
+      currentMonday.getFullYear() === weekStartDate.getFullYear() &&
+      currentMonday.getMonth() === weekStartDate.getMonth() &&
+      currentMonday.getDate() === weekStartDate.getDate()
+    );
+  };
+  
   // Render the calendar
   return (
     <div className="simple-calendar">
-      <h2>Nail Salon Weekly Calendar</h2>
+      <div className="calendar-header">
+        <h2>Nail Salon Calendar</h2>
+        <div className="calendar-navigation">
+          <button onClick={goToPreviousMonth} className="nav-button month-nav">
+            &laquo; Previous Month
+          </button>
+          <button onClick={goToPreviousWeek} className="nav-button">
+            &laquo; Previous Week
+          </button>
+          <button onClick={goToCurrentWeek} className="nav-button today-button" disabled={isCurrentWeek()}>
+            Current Week
+          </button>
+          <button onClick={goToNextWeek} className="nav-button">
+            Next Week &raquo;
+          </button>
+          <button onClick={goToNextMonth} className="nav-button month-nav">
+            Next Month &raquo;
+          </button>
+        </div>
+        <div className="week-label">{getWeekLabel()}</div>
+      </div>
       
       <div className="calendar-grid">
         <div className="grid-header">
@@ -170,23 +305,37 @@ export function SimpleCalendar({
       )}
       
       <div className="appointments-list">
-        <h3>All Appointments</h3>
+        <h3>All Appointments ({appointments.length})</h3>
         {appointments.length === 0 ? (
           <p>No appointments scheduled.</p>
         ) : (
-          <ul>
-            {appointments.map((appointment) => (
-              <li key={appointment.id} className="appointment-item">
-                <div className="appointment-customer">{appointment.customerName}</div>
-                <div className="appointment-date">{appointment.date} at {appointment.time}</div>
-                <div className="appointment-service">{appointment.service}</div>
-                <div className="appointment-phone">📱 {appointment.phoneNumber}</div>
-                {appointment.technician && (
-                  <div className="appointment-technician">Technician: {appointment.technician}</div>
-                )}
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="filter-controls">
+              <label>
+                <input 
+                  type="checkbox" 
+                  checked={showAllAppointments} 
+                  onChange={() => setShowAllAppointments(!showAllAppointments)}
+                />
+                Show all appointments
+              </label>
+            </div>
+            <ul>
+              {appointments
+                .filter(appointment => showAllAppointments || weekDates.some(day => day.date === appointment.date))
+                .map((appointment) => (
+                  <li key={appointment.id} className="appointment-item">
+                    <div className="appointment-customer">{appointment.customerName}</div>
+                    <div className="appointment-date">{formatDate(appointment.date)} at {appointment.time}</div>
+                    <div className="appointment-service">{appointment.service}</div>
+                    <div className="appointment-phone">📱 {appointment.phoneNumber}</div>
+                    {appointment.technician && (
+                      <div className="appointment-technician">Technician: {appointment.technician}</div>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          </>
         )}
       </div>
     </div>

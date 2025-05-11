@@ -1,181 +1,141 @@
 .salon-receptionist {
-  display: flex;
-  flex-direction: column;
   max-width: 1200px;
   margin: 0 auto;
-  padding-bottom: 80px;
+  padding: 20px;
+  
+  .salon-header {
+    text-align: center;
+    margin-bottom: 30px;
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .salon-description {
+      color: #666;
+      font-size: 16px;
+    }
+  }
   
   .manager-controls {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 16px;
+    text-align: right;
+    margin-bottom: 20px;
     
-    .toggle-manager-inbox {
-      background-color: #f2f2f2;
-      border: none;
-      border-radius: 4px;
+    button {
       padding: 8px 16px;
+      background-color: #f1f1f1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
       cursor: pointer;
-      font-weight: 500;
-      position: relative;
-      transition: all 0.2s ease;
       
       &:hover {
-        background-color: #e6e6e6;
-      }
-      
-      &.active {
-        background-color: #bbdefb;
-        color: #1565c0;
-      }
-      
-      &.has-pending {
-        background-color: #ffecb3;
-        
-        &:hover {
-          background-color: #ffe082;
-        }
-        
-        &.active {
-          background-color: #ffcc80;
-          color: #e65100;
-        }
-      }
-      
-      .pending-badge {
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        background-color: #f44336;
-        color: white;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
+        background-color: #e5e5e5;
       }
     }
   }
   
   .manager-inbox {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     
     h3 {
       margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 18px;
-      color: #333;
-      border-bottom: 1px solid #e0e0e0;
-      padding-bottom: 8px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
     }
     
     .message-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      
       .message-item {
-        background-color: white;
-        border-radius: 6px;
-        padding: 16px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background-color: #f9f9f9;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
         
-        &.pending {
-          border-left: 4px solid #ffc107;
+        &.urgent {
+          border-left: 4px solid #d32f2f;
+        }
+        
+        &.normal {
+          border-left: 4px solid #1976d2;
         }
         
         &.responded {
-          border-left: 4px solid #4caf50;
-        }
-        
-        &.urgent {
-          &.pending {
-            border-left: 4px solid #f44336;
-            background-color: #fff8f8;
-          }
+          opacity: 0.8;
         }
         
         .message-header {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 12px;
-          font-size: 14px;
+          margin-bottom: 10px;
           
-          .timestamp {
-            color: #666;
+          .message-id {
+            font-size: 12px;
+            color: #777;
           }
           
-          .status {
-            padding: 2px 8px;
-            border-radius: 12px;
+          .message-timestamp {
             font-size: 12px;
-            font-weight: 500;
-            
-            &.pending {
-              background-color: #fff8e1;
-              color: #ff8f00;
-            }
-            
-            &.responded {
-              background-color: #e8f5e9;
-              color: #2e7d32;
-            }
-          }
-          
-          .priority {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-            
-            &.normal {
-              background-color: #e3f2fd;
-              color: #1565c0;
-            }
-            
-            &.urgent {
-              background-color: #ffebee;
-              color: #c62828;
-            }
+            color: #777;
           }
         }
         
         .message-content {
-          p {
-            margin: 8px 0;
+          margin-bottom: 15px;
+          
+          .client-request {
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          
+          .message-reason {
+            color: #666;
+          }
+          
+          .message-priority {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+            
+            &.urgent {
+              background-color: #ffebee;
+              color: #d32f2f;
+            }
+            
+            &.normal {
+              background-color: #e3f2fd;
+              color: #1976d2;
+            }
           }
         }
         
         .response-form {
-          margin-top: 16px;
-          border-top: 1px solid #eee;
-          padding-top: 16px;
+          margin-top: 15px;
           
           textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            margin-bottom: 10px;
             resize: vertical;
-            font-family: inherit;
-            margin-bottom: 8px;
           }
           
           button {
+            padding: 8px 15px;
             background-color: #1976d2;
             color: white;
             border: none;
             border-radius: 4px;
-            padding: 8px 16px;
             cursor: pointer;
-            font-weight: 500;
             
             &:hover {
               background-color: #1565c0;
@@ -184,245 +144,180 @@
         }
         
         .response-display {
-          margin-top: 16px;
-          border-top: 1px solid #eee;
-          padding-top: 16px;
+          margin-top: 15px;
+          padding: 10px;
+          background-color: #e8f5e9;
+          border-radius: 4px;
+          
+          p {
+            margin: 5px 0;
+          }
           
           .response-text {
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            padding: 12px;
-            margin: 8px 0;
-            font-style: italic;
+            color: #388e3c;
           }
           
           .response-timestamp {
-            text-align: right;
             font-size: 12px;
-            color: #666;
-            margin-top: 4px;
+            color: #777;
+            text-align: right;
+            margin-top: 5px;
           }
         }
       }
     }
   }
   
-  .manager-message-sent {
-    background-color: #e8f5e9;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid #4caf50;
-    
-    &.urgent {
-      background-color: #fff8f8;
-      border-left: 4px solid #f44336;
-    }
+  .availability-results,
+  .booking-results,
+  .cancellation-results {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     
     h3 {
       margin-top: 0;
-      margin-bottom: 12px;
-      font-size: 18px;
-      color: #2e7d32;
-    }
-    
-    &.urgent h3 {
-      color: #c62828;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
     }
     
     .result-content {
       p {
-        margin: 6px 0;
+        margin: 5px 0;
       }
       
       .result-message {
-        font-size: 16px;
-        margin-top: 12px;
-        font-weight: 500;
-      }
-    }
-  }
-  
-  .availability-results, .booking-results, .cancellation-results {
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    
-    h3 {
-      margin-top: 0;
-      margin-bottom: 12px;
-      font-size: 18px;
-      color: #333;
-    }
-    
-    .result-content {
-      p {
-        margin: 6px 0;
-      }
-      
-      .result-message {
-        font-size: 16px;
-        margin-top: 12px;
-        font-weight: 500;
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        font-style: italic;
       }
       
       .slots-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 10px;
         list-style: none;
-        padding-left: 0;
+        padding: 0;
+        margin: 10px 0;
         
         li {
-          background-color: #e0f2f1;
-          padding: 4px 8px;
+          padding: 5px 10px;
+          background-color: #e8f5e9;
           border-radius: 4px;
+          color: #388e3c;
           font-size: 14px;
         }
       }
       
       .weekly-availability {
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        padding: 15px;
+        margin-top: 15px;
+        
         .day-availability {
-          margin: 4px 0;
-        }
-      }
-    }
-  }
-  
-  .booking-results {
-    &.success {
-      background-color: #e8f5e9;
-      border-left: 4px solid #4caf50;
-      
-      h3 {
-        color: #2e7d32;
-      }
-    }
-    
-    &.error {
-      background-color: #ffebee;
-      border-left: 4px solid #f44336;
-      
-      h3 {
-        color: #c62828;
-      }
-    }
-    
-    .appointment-details {
-      background-color: white;
-      border-radius: 6px;
-      padding: 12px;
-      margin-top: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      
-      p {
-        margin: 6px 0;
-        
-        &:nth-child(2) {
-          font-size: 14px;
-          color: #555;
-          
-          strong {
-            font-weight: normal;
-            color: #666;
-          }
-        }
-      }
-    }
-  }
-  
-  .cancellation-results {
-    &.success {
-      background-color: #fff8e1;
-      border-left: 4px solid #ffc107;
-      
-      h3 {
-        color: #ff8f00;
-      }
-    }
-    
-    &.error {
-      background-color: #ffebee;
-      border-left: 4px solid #f44336;
-      
-      h3 {
-        color: #c62828;
-      }
-    }
-    
-    .cancelled-appointment-details {
-      background-color: white;
-      border-radius: 6px;
-      padding: 12px;
-      margin-top: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      text-decoration: line-through;
-      opacity: 0.8;
-      
-      p {
-        margin: 6px 0;
-        
-        &:first-child {
-          text-decoration: none;
-          font-weight: 500;
-          color: #ff8f00;
-        }
-        
-        &:nth-child(3) {
-          font-size: 14px;
-          color: #555;
-          
-          strong {
-            font-weight: normal;
-            color: #666;
-          }
-        }
-      }
-    }
-    
-    .multiple-appointments {
-      background-color: white;
-      border-radius: 6px;
-      padding: 12px;
-      margin-top: 12px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      
-      p {
-        margin: 6px 0;
-        
-        &:first-child {
-          font-weight: 500;
-          color: #ff8f00;
           margin-bottom: 10px;
-        }
-      }
-      
-      ul {
-        list-style: none;
-        padding-left: 0;
-        
-        li {
-          background-color: #fff8e1;
-          border-radius: 4px;
-          padding: 8px 12px;
-          margin-bottom: 6px;
-          border-left: 3px solid #ffc107;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #eee;
+          
+          &:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+          }
           
           p {
-            margin: 0;
+            margin: 0 0 5px 0;
+            font-weight: 500;
+          }
+          
+          .mini-slots-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            list-style: none;
+            padding: 0;
+            margin: 5px 0;
             
-            &:nth-child(2) {
-              font-size: 13px;
-              opacity: 0.8;
-              margin-top: 2px;
-              color: #666;
+            li {
+              padding: 3px 8px;
+              background-color: #e8f5e9;
+              border-radius: 3px;
+              color: #388e3c;
+              font-size: 12px;
             }
           }
         }
       }
     }
+    
+    &.success {
+      border-left: 4px solid #388e3c;
+      
+      h3 {
+        color: #388e3c;
+      }
+    }
+    
+    &.error {
+      border-left: 4px solid #d32f2f;
+      
+      h3 {
+        color: #d32f2f;
+      }
+    }
+    
+    .appointment-details {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      
+      p {
+        margin: 5px 0;
+      }
+    }
   }
-} 
+  
+  .cancellation-results {
+    .cancelled-appointment {
+      background-color: #ffebee;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 15px;
+      border-left: 3px solid #d32f2f;
+      
+      p {
+        margin: 5px 0;
+      }
+    }
+    
+    .ambiguous-appointments {
+      h4 {
+        margin-top: 15px;
+        margin-bottom: 10px;
+        color: #d32f2f;
+      }
+      
+      .appointment-list {
+        .appointment-item {
+          background-color: #f9f9f9;
+          border: 1px solid #eee;
+          border-radius: 4px;
+          padding: 15px;
+          margin-bottom: 10px;
+          
+          p {
+            margin: 5px 0;
+          }
+        }
+      }
+    }
+  }
+}

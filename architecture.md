@@ -1,5 +1,12 @@
 # Live API Web Console Architecture
 
+## Key Update: Expanded Calendar System
+- Calendar now supports multi-week and multi-month navigation
+- Enhanced date processing for natural language inputs ("next week", "in two weeks")
+- Appointment filtering between current week and all appointments
+- Improved UI with intuitive navigation controls and visual indicators
+- Week date range display for better context awareness
+
 ## Key Update: Manager Communication Feature
 - Manager escalation system for special requests, discounts over 20%, and customer complaints
 - Messages tracked with priority (normal/urgent) and status (pending/responded)
@@ -69,7 +76,7 @@ The Live API Web Console is a React-based web application that provides a real-t
 
 - **ControlTray** (`src/components/control-tray/ControlTray.tsx`): UI controls for managing audio, video, and connection settings.
 
-- **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`): Interactive calendar showing weekly time slots and appointment details.
+- **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`): Interactive calendar showing weekly time slots, appointments, and navigation controls for week/month traversal.
 
 - **SalonReceptionist** (`src/components/salon-receptionist/SalonReceptionist.tsx`): Demonstration of function calling capabilities for a salon booking system, with appointment availability checks, booking, cancellation, and manager communication.
 
@@ -87,12 +94,41 @@ The Live API Web Console is a React-based web application that provides a real-t
 
 The salon appointment system showcases Gemini's function calling capabilities with:
 
-1. **Availability Checking**: Search for open time slots by date or across the week
-2. **Appointment Booking**: Book appointments with customer name, date, time, and service
+1. **Availability Checking**: 
+   - Search for open time slots by specific date, time, or date range
+   - Support for natural language date queries (e.g., "next week Tuesday")
+   - Week-based availability overview with navigation
+
+2. **Appointment Booking**: Book appointments with customer name, date, time, service, and phone number
+
 3. **Appointment Cancellation**: Cancel appointments using customer name, with disambiguation when needed
+
 4. **Manager Communication**: Escalate special requests to a salon manager and incorporate responses
 
-All functions include natural language processing for inputs like "today", "tomorrow", and day names.
+All functions process natural language inputs through sophisticated date parsing for terms like "today", "tomorrow", "next week", and specific day names.
+
+## Calendar System
+
+The enhanced calendar component features:
+
+1. **Multi-period Navigation**:
+   - Week-based navigation (Previous/Next Week)
+   - Month-based navigation (Previous/Next Month) 
+   - "Today" button to return to current week
+
+2. **Date Range Display**:
+   - Visual week label showing current date range
+   - Highlighting of focused dates
+   - Clear indication of booked vs. available slots
+
+3. **Filtering**:
+   - Toggle between current week view and all appointments
+   - Appointment counts and condensed list views
+
+4. **Responsive Design**:
+   - Grid layout for appointment lists
+   - Compact time slot visualization
+   - Intuitive navigation controls
 
 ## Data Flow
 
@@ -124,6 +160,7 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - Tool calls
 - Appointment data structures
 - Manager message data structures
+- Calendar state definitions
 
 ## Key Interactions
 
@@ -133,6 +170,7 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - **Conversations**: Handled through SidePanel component
 - **Appointment Management**: Handled via SalonReceptionist component with function calling
 - **Manager Communication**: Dedicated inbox and response system for handling special requests
+- **Calendar Navigation**: Multi-week/month traversal with context-aware date processing
 
 ## Design Patterns
 
@@ -141,3 +179,4 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - **Custom Hooks**: For encapsulating complex behavior
 - **Type Guards**: For runtime type safety when handling API responses
 - **Function Calling**: For structured interaction between the AI and the application
+- **Stateful Navigation**: For managing calendar view state and transitions

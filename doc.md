@@ -550,15 +550,108 @@ function DateTimeComponent() {
 export const DateTime = DateTimeComponent;
 ```
 
+## Enhanced Calendar System
+
+The expanded calendar system supports multi-week navigation and improved appointment management:
+
+### Key Features
+
+1. **Advanced Navigation Controls**
+   - Week-based navigation (Previous Week, Current Week, Next Week)
+   - Month-based navigation (Previous Month, Next Month)
+   - Current week auto-detection and highlighting
+
+2. **Enhanced Date Processing**
+   - Support for natural language date inputs:
+     - Day names ("Monday", "Tuesday", etc.)
+     - Relative dates ("today", "tomorrow")
+     - Future periods ("next week", "in two weeks")
+   - Specific day targeting ("next week's Monday")
+
+3. **Improved Appointment Visibility**
+   - Filter toggle between current week and all appointments
+   - Week label showing current date range in view
+   - Highlighted appointments for better visibility
+
+### Implementation Approach
+
+The calendar system uses a stateful approach to manage the currently viewed time period:
+
+```typescript
+// Types for enhanced calendar state
+export type CalendarState = {
+  currentDate: string; // YYYY-MM-DD of selected date
+  weekStartDate: Date; // Date object of the week's start (Monday)
+};
+
+// State management
+const [weekStartDate, setWeekStartDate] = useState<Date>(getMondayOfCurrentWeek());
+const [weekDates, setWeekDates] = useState<{ date: string, label: string }[]>(getWeekDates(getMondayOfCurrentWeek()));
+const [showAllAppointments, setShowAllAppointments] = useState(false);
+```
+
+### Function Call Integration
+
+The `check_availability` function has been enhanced to support expanded date queries:
+
+```typescript
+const checkAvailabilityDeclaration: FunctionDeclaration = {
+  name: "check_availability",
+  description: "Checks for available appointment slots in the nail salon calendar",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      date: {
+        type: SchemaType.STRING,
+        description: "The date to check - can be in YYYY-MM-DD format, a day name (Monday, Tuesday, etc), or keywords like 'today', 'tomorrow', 'next week', 'in two weeks'. If not provided, will return availability for the current week."
+      },
+      time: {
+        type: SchemaType.STRING,
+        description: "Optional. The specific time to check in HH:MM format (24-hour)."
+      }
+    },
+    required: []
+  }
+};
+```
+
+This function now handles three query types:
+1. Specific date and time check
+2. All available slots for a specific date
+3. Weekly availability overview for any week (current, next, or specified period)
+
+### Date Processing Logic
+
+The advanced date processing supports sophisticated date identification:
+
+```typescript
+// Example of parsing "next week Tuesday"
+if (lowerDateInput.includes('next week')) {
+  const dayMatch = lowerDateInput.match(/next week('s)?\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i);
+  if (dayMatch && dayMatch[2]) {
+    const targetDay = dayMatch[2].toLowerCase();
+    return getDayNameDateNextWeek(targetDay);
+  }
+}
+```
+
+### UI Improvements
+
+The calendar UI has been enhanced with:
+- Week date range label
+- Color-coded navigation buttons
+- Appointment filtering controls
+- Improved styling for better readability
+- Responsive grid layouts for appointment lists
+
 ## Best Practices
 
-1. **Clear Function Names**: Use descriptive, lowercase, snake_case function names
-2. **Detailed Descriptions**: Provide detailed descriptions for functions and parameters
-3. **Appropriate Instructions**: Include clear system instructions about when to use the function
-4. **Error Handling**: Implement error handling in your function logic
-5. **Cleanup Listeners**: Always clean up event listeners in the `useEffect` return function
-6. **UI Feedback**: Provide visual feedback in the UI when functions are called
-7. **Guide Result Handling**: Explicitly instruct the model on how to handle function results
+1. **State Management**: Maintain a clear state model for your calendar (current view, selected dates, etc.)
+2. **Date Standardization**: Normalize all date inputs to a consistent format (YYYY-MM-DD) internally
+3. **Navigation Helper Functions**: Create reusable functions for date navigation and manipulation
+4. **UI Feedback**: Provide clear visual indicators for the current date range and selected appointments
+5. **Filter Options**: Allow users to control how appointments are displayed
+6. **Performance**: Implement filtering to limit the number of appointments rendered at once
 
 ## Common Issues
 

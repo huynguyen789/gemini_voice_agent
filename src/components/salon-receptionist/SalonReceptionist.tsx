@@ -5,7 +5,7 @@ import { type FunctionDeclaration, SchemaType } from "@google/generative-ai";
 import { useEffect, useState } from "react";
 import { useLiveAPIContext } from "../../contexts/LiveAPIContext";
 import { ToolCall } from "../../multimodal-live-types";
-import SimpleCalendar, { Appointment } from "../simple-calendar/SimpleCalendar";
+import SimpleCalendar, { Appointment, CalendarState } from "../simple-calendar/SimpleCalendar";
 import "./salon-receptionist.scss";
 
 // Manager message type definition
@@ -20,18 +20,10 @@ type ManagerMessage = {
   status: 'pending' | 'responded';
 };
 
-// Get the dates for this week (Monday-Sunday)
-const getWeekDates = (): { date: string; label: string }[] => {
-  const today = new Date();
-  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday...
-  
-  // Calculate the Monday of this week
-  const startDate = new Date(today);
-  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1;
-  startDate.setDate(today.getDate() - daysSinceMonday);
-  
-  // Generate array of dates for the week
+// Get the dates for a specific week (Monday-Sunday)
+const getWeekDates = (startDate: Date): { date: string, label: string }[] => {
   const weekDates = [];
+  
   for (let i = 0; i < 7; i++) {
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + i);
@@ -55,18 +47,33 @@ const timeSlots = [
   "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"
 ];
 
+// Calculate the Monday of the current week
+const getMondayOfCurrentWeek = (): Date => {
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday...
+  
+  const startDate = new Date(today);
+  const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1;
+  startDate.setDate(today.getDate() - daysSinceMonday);
+  
+  // Reset hours to beginning of the day to avoid time issues
+  startDate.setHours(0, 0, 0, 0);
+  
+  return startDate;
+};
+
 // Initial appointments (pre-populated for demo)
 const initialAppointments: Appointment[] = [
-  { id: 1, date: getWeekDates()[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure", phoneNumber: "(555) 123-4567" },
-  { id: 2, date: getWeekDates()[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure", phoneNumber: "(555) 234-5678" },
-  { id: 3, date: getWeekDates()[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions", phoneNumber: "(555) 345-6789" },
-  { id: 4, date: getWeekDates()[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure", phoneNumber: "(555) 456-7890" },
-  { id: 5, date: getWeekDates()[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure", phoneNumber: "(555) 567-8901" },
-  { id: 6, date: getWeekDates()[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint", phoneNumber: "(555) 678-9012" },
-  { id: 7, date: getWeekDates()[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination", phoneNumber: "(555) 789-0123" },
+  { id: 1, date: getWeekDates(getMondayOfCurrentWeek())[0].date, time: "10:00", customerName: "Sarah Johnson", service: "Gel Manicure", phoneNumber: "(555) 123-4567" },
+  { id: 2, date: getWeekDates(getMondayOfCurrentWeek())[2].date, time: "14:00", customerName: "Mike Roberts", service: "Deluxe Pedicure", phoneNumber: "(555) 234-5678" },
+  { id: 3, date: getWeekDates(getMondayOfCurrentWeek())[4].date, time: "11:00", customerName: "Emma Davis", service: "Gel X Extensions", phoneNumber: "(555) 345-6789" },
+  { id: 4, date: getWeekDates(getMondayOfCurrentWeek())[5].date, time: "15:00", customerName: "David Wilson", service: "Russian Manicure", phoneNumber: "(555) 456-7890" },
+  { id: 5, date: getWeekDates(getMondayOfCurrentWeek())[1].date, time: "13:00", customerName: "Olivia Smith", service: "Madison Valgari Luxurious Pedicure", phoneNumber: "(555) 567-8901" },
+  { id: 6, date: getWeekDates(getMondayOfCurrentWeek())[3].date, time: "16:00", customerName: "Jennifer Lee", service: "Lash Lift & Tint", phoneNumber: "(555) 678-9012" },
+  { id: 7, date: getWeekDates(getMondayOfCurrentWeek())[6].date, time: "12:00", customerName: "Alex Chen", service: "Brow Lamination", phoneNumber: "(555) 789-0123" },
 ];
 
-// Function declarations
+// Modified function declaration for check_availability to support week ranges
 const checkAvailabilityDeclaration: FunctionDeclaration = {
   name: "check_availability",
   description: "Checks for available appointment slots in the nail salon calendar",
@@ -75,7 +82,7 @@ const checkAvailabilityDeclaration: FunctionDeclaration = {
     properties: {
       date: {
         type: SchemaType.STRING,
-        description: "The date to check in YYYY-MM-DD format. If not provided, will return availability for the current week."
+        description: "The date to check - can be in YYYY-MM-DD format, a day name (Monday, Tuesday, etc), or keywords like 'today', 'tomorrow', 'next week', 'in two weeks'. If not provided, will return availability for the current week."
       },
       time: {
         type: SchemaType.STRING,
@@ -180,19 +187,35 @@ const processDateInput = (dateInput: string): string => {
   tomorrow.setDate(today.getDate() + 1);
   
   // Handle special keywords
-  switch (dateInput.toLowerCase()) {
-    case 'today':
-      return today.toISOString().split('T')[0]; // YYYY-MM-DD
-    case 'tomorrow':
-      return tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
-    default:
-      // Check if it's a day name
-      if (isDayName(dateInput)) {
-        return getDayNameToDate(dateInput);
-      }
-      // Assume it's already in YYYY-MM-DD format
-      return dateInput;
+  const lowerDateInput = dateInput.toLowerCase();
+  
+  if (lowerDateInput === 'today') {
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD
+  } else if (lowerDateInput === 'tomorrow') {
+    return tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
+  } else if (lowerDateInput.includes('next week')) {
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    // If a specific day is mentioned, find that day next week
+    const dayMatch = lowerDateInput.match(/next week('s)?\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i);
+    if (dayMatch && dayMatch[2]) {
+      const targetDay = dayMatch[2].toLowerCase();
+      return getDayNameDateNextWeek(targetDay);
+    }
+    
+    // Otherwise return the same day next week
+    return nextWeek.toISOString().split('T')[0];
+  } else if (lowerDateInput.includes('in two weeks') || lowerDateInput.includes('in 2 weeks')) {
+    const twoWeeks = new Date(today);
+    twoWeeks.setDate(today.getDate() + 14);
+    return twoWeeks.toISOString().split('T')[0];
+  } else if (isDayName(lowerDateInput)) {
+    return getDayNameToDate(lowerDateInput);
   }
+  
+  // Assume it's already in YYYY-MM-DD format
+  return dateInput;
 };
 
 const isDayName = (input: string): boolean => {
@@ -224,6 +247,28 @@ const getDayNameToDate = (dayName: string): string => {
   }
   
   // Create the new date by adding the required days
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + daysToAdd);
+  
+  return targetDate.toISOString().split('T')[0];
+};
+
+// Get specific day in next week
+const getDayNameDateNextWeek = (dayName: string): string => {
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const today = new Date();
+  
+  // Find day index
+  const targetDayIndex = days.findIndex(day => day === dayName.toLowerCase());
+  
+  // Calculate days to add to get to next week's occurrence of that day
+  const todayDayIndex = today.getDay();
+  let daysToAdd = 7 + (targetDayIndex - todayDayIndex);
+  
+  // Adjust if we're already on that day
+  if (daysToAdd === 7) daysToAdd = 14;
+  
+  // Create new date
   const targetDate = new Date(today);
   targetDate.setDate(today.getDate() + daysToAdd);
   
@@ -270,6 +315,38 @@ function SalonReceptionistComponent() {
       .map(app => app.time);
     
     return timeSlots.filter(time => !bookedTimes.includes(time));
+  };
+  
+  // Get the Monday of a week containing the specified date
+  const getMondayOfWeek = (date: Date): Date => {
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    const monday = new Date(date);
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0); // Reset hours to beginning of the day
+    return monday;
+  };
+  
+  // Calculate week of a date for week-based availability checks
+  const getWeekOfDate = (dateStr: string): Date => {
+    const date = new Date(dateStr);
+    return getMondayOfWeek(date);
+  };
+  
+  // Update the availability function to handle week-based queries
+  const getAvailableSlotsForWeek = (weekStartDate: Date): Record<string, string[]> => {
+    const weekAvailability: Record<string, string[]> = {};
+    
+    // Get all dates for the week
+    const weekDates = getWeekDates(weekStartDate);
+    
+    // Calculate available slots for each day in the week
+    weekDates.forEach(day => {
+      const availableSlots = getAvailableSlots(day.date);
+      weekAvailability[day.date] = availableSlots;
+    });
+    
+    return weekAvailability;
   };
   
   // Configure the model with our functions
@@ -459,7 +536,7 @@ FACIALS:
     });
   }, [setConfig]);
   
-  // Handle function calls
+  // Update the tool call handler for enhanced availability checking
   useEffect(() => {
     const onToolCall = (toolCall: ToolCall) => {
       console.log(`Got tool call`, toolCall);
@@ -489,11 +566,54 @@ FACIALS:
         let response: any;
         
         // Process date input for special keywords and day names
-        const dateToCheck = args.date ? processDateInput(args.date) : '';
-        console.log(`Original date input: ${args.date}, Processed date: ${dateToCheck}`);
+        let dateToCheck = '';
+        let weekMode = false;
+        let weekStartDate: Date | null = null;
+        
+        if (args.date) {
+          const lowerDateInput = args.date.toLowerCase();
+          
+          // Check if it's a week-based query
+          if (lowerDateInput.includes('next week') || lowerDateInput.includes('in two weeks') || lowerDateInput.includes('in 2 weeks')) {
+            weekMode = true;
+            
+            if (lowerDateInput.includes('next week')) {
+              const today = new Date();
+              const nextWeek = new Date(today);
+              nextWeek.setDate(today.getDate() + 7);
+              weekStartDate = getMondayOfWeek(nextWeek);
+              
+              // If a specific day is mentioned, process that day
+              const dayMatch = lowerDateInput.match(/next week('s)?\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i);
+              if (dayMatch && dayMatch[2]) {
+                weekMode = false;
+                dateToCheck = getDayNameDateNextWeek(dayMatch[2].toLowerCase());
+              }
+            } else if (lowerDateInput.includes('in two weeks') || lowerDateInput.includes('in 2 weeks')) {
+              const today = new Date();
+              const twoWeeks = new Date(today);
+              twoWeeks.setDate(today.getDate() + 14);
+              weekStartDate = getMondayOfWeek(twoWeeks);
+            }
+          } else {
+            // Process regular date
+            dateToCheck = processDateInput(args.date);
+            
+            // If no specific time is requested, we'll show the whole week containing this date
+            if (!args.time) {
+              weekMode = true;
+              weekStartDate = getWeekOfDate(dateToCheck);
+            }
+          }
+        } else {
+          // No date specified, show current week
+          weekMode = true;
+          const today = new Date();
+          weekStartDate = getMondayOfWeek(today);
+        }
         
         // Case 1: Check specific date and time
-        if (dateToCheck && args.time) {
+        if (!weekMode && dateToCheck && args.time) {
           const time = args.time;
           const available = !isSlotBooked(dateToCheck, time);
           
@@ -508,8 +628,8 @@ FACIALS:
               : `Sorry, ${time} on ${formatDate(dateToCheck)} is already booked.`
           };
         }
-        // Case 2: Check availability for a specific date
-        else if (dateToCheck) {
+        // Case 2: Check all available slots for a specific date
+        else if (!weekMode && dateToCheck) {
           const availableSlots = getAvailableSlots(dateToCheck);
           
           setCheckedDate(dateToCheck);
@@ -522,26 +642,42 @@ FACIALS:
               : `Sorry, there are no available slots on ${formatDate(dateToCheck)}.`
           };
         }
-        // Case 3: Check availability for the whole week
-        else {
-          const weekDates = getWeekDates();
-          const weekAvailability: Record<string, string[]> = {};
-          let totalAvailableSlots = 0;
+        // Case 3: Check weekly availability
+        else if (weekMode && weekStartDate) {
+          const weekAvailability = getAvailableSlotsForWeek(weekStartDate);
           
-          weekDates.forEach(day => {
-            const availableSlots = getAvailableSlots(day.date);
-            weekAvailability[day.date] = availableSlots;
-            totalAvailableSlots += availableSlots.length;
+          // Count total available slots
+          let totalAvailableSlots = 0;
+          Object.values(weekAvailability).forEach(slots => {
+            totalAvailableSlots += slots.length;
           });
           
-          response = {
-            week_of: weekDates[0].date,
-            availability: weekAvailability,
-            message: `There are ${totalAvailableSlots} available slots this week.`
+          // Format week label for response
+          const weekEnd = new Date(weekStartDate);
+          weekEnd.setDate(weekStartDate.getDate() + 6);
+          
+          const formatShortDate = (date: Date) => {
+            return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
           };
+          
+          const weekLabel = `${formatShortDate(weekStartDate)} - ${formatShortDate(weekEnd)}`;
+          
+          response = {
+            week_of: weekStartDate.toISOString().split('T')[0],
+            week_label: weekLabel,
+            availability: weekAvailability,
+            message: totalAvailableSlots > 0
+              ? `There are ${totalAvailableSlots} available slots for the week of ${weekLabel}.`
+              : `Sorry, there are no available slots for the week of ${weekLabel}.`
+          };
+          
+          // Set checked date to Monday of the week for highlighting
+          setCheckedDate(weekStartDate.toISOString().split('T')[0]);
         }
         
         setLastAvailabilityCheck(response);
+        setLastBookingResult(null);
+        setLastCancellationResult(null);
         setLastManagerMessage(null);
         
         // Send response back to the model
@@ -865,13 +1001,20 @@ FACIALS:
                 </ul>
               </div>
             )}
-            {lastAvailabilityCheck.week_of && (
+            {lastAvailabilityCheck.week_label && (
               <div>
-                <p>Week of {formatDate(lastAvailabilityCheck.week_of)}</p>
+                <p>Week of {lastAvailabilityCheck.week_label}</p>
                 <div className="weekly-availability">
                   {Object.entries(lastAvailabilityCheck.availability).map(([date, slots]) => (
                     <div key={date} className="day-availability">
                       <p>{formatDate(date)}: {(slots as string[]).length} slots available</p>
+                      {(slots as string[]).length > 0 && (
+                        <ul className="mini-slots-list">
+                          {(slots as string[]).map(slot => (
+                            <li key={`${date}-${slot}`}>{slot}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   ))}
                 </div>
