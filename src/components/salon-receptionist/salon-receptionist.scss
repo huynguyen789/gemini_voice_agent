@@ -5,6 +5,245 @@
   margin: 0 auto;
   padding-bottom: 80px;
   
+  .manager-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+    
+    .toggle-manager-inbox {
+      background-color: #f2f2f2;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 500;
+      position: relative;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background-color: #e6e6e6;
+      }
+      
+      &.active {
+        background-color: #bbdefb;
+        color: #1565c0;
+      }
+      
+      &.has-pending {
+        background-color: #ffecb3;
+        
+        &:hover {
+          background-color: #ffe082;
+        }
+        
+        &.active {
+          background-color: #ffcc80;
+          color: #e65100;
+        }
+      }
+      
+      .pending-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #f44336;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+      }
+    }
+  }
+  
+  .manager-inbox {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    h3 {
+      margin-top: 0;
+      margin-bottom: 16px;
+      font-size: 18px;
+      color: #333;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 8px;
+    }
+    
+    .message-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      
+      .message-item {
+        background-color: white;
+        border-radius: 6px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        
+        &.pending {
+          border-left: 4px solid #ffc107;
+        }
+        
+        &.responded {
+          border-left: 4px solid #4caf50;
+        }
+        
+        &.urgent {
+          &.pending {
+            border-left: 4px solid #f44336;
+            background-color: #fff8f8;
+          }
+        }
+        
+        .message-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          font-size: 14px;
+          
+          .timestamp {
+            color: #666;
+          }
+          
+          .status {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            
+            &.pending {
+              background-color: #fff8e1;
+              color: #ff8f00;
+            }
+            
+            &.responded {
+              background-color: #e8f5e9;
+              color: #2e7d32;
+            }
+          }
+          
+          .priority {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            
+            &.normal {
+              background-color: #e3f2fd;
+              color: #1565c0;
+            }
+            
+            &.urgent {
+              background-color: #ffebee;
+              color: #c62828;
+            }
+          }
+        }
+        
+        .message-content {
+          p {
+            margin: 8px 0;
+          }
+        }
+        
+        .response-form {
+          margin-top: 16px;
+          border-top: 1px solid #eee;
+          padding-top: 16px;
+          
+          textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: inherit;
+            margin-bottom: 8px;
+          }
+          
+          button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            
+            &:hover {
+              background-color: #1565c0;
+            }
+          }
+        }
+        
+        .response-display {
+          margin-top: 16px;
+          border-top: 1px solid #eee;
+          padding-top: 16px;
+          
+          .response-text {
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            padding: 12px;
+            margin: 8px 0;
+            font-style: italic;
+          }
+          
+          .response-timestamp {
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+          }
+        }
+      }
+    }
+  }
+  
+  .manager-message-sent {
+    background-color: #e8f5e9;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #4caf50;
+    
+    &.urgent {
+      background-color: #fff8f8;
+      border-left: 4px solid #f44336;
+    }
+    
+    h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 18px;
+      color: #2e7d32;
+    }
+    
+    &.urgent h3 {
+      color: #c62828;
+    }
+    
+    .result-content {
+      p {
+        margin: 6px 0;
+      }
+      
+      .result-message {
+        font-size: 16px;
+        margin-top: 12px;
+        font-weight: 500;
+      }
+    }
+  }
+  
   .availability-results, .booking-results, .cancellation-results {
     background-color: #f5f5f5;
     border-radius: 8px;

@@ -1,5 +1,11 @@
 # Live API Web Console Architecture
 
+## Key Update: Manager Communication Feature
+- Manager escalation system for special requests, discounts over 20%, and customer complaints
+- Messages tracked with priority (normal/urgent) and status (pending/responded)
+- Interactive manager inbox UI with response capabilities
+- AI receptionist can incorporate manager guidance into client conversations
+
 ## Key Update: Phone Number in Bookings
 - All appointment bookings now require a `phoneNumber` (string) field.
 - The `Appointment` type includes `phoneNumber`.
@@ -15,6 +21,7 @@ The Live API Web Console is a React-based web application that provides a real-t
 - Video/screen capture capabilities
 - Calendar visualization for demonstration purposes
 - Function calling capabilities for appointment booking and management
+- Manager escalation system for special requests
 
 ## Directory Structure
 
@@ -64,7 +71,7 @@ The Live API Web Console is a React-based web application that provides a real-t
 
 - **SimpleCalendar** (`src/components/simple-calendar/SimpleCalendar.tsx`): Interactive calendar showing weekly time slots and appointment details.
 
-- **SalonReceptionist** (`src/components/salon-receptionist/SalonReceptionist.tsx`): Demonstration of function calling capabilities for a salon booking system, with appointment availability checks, booking, and cancellation.
+- **SalonReceptionist** (`src/components/salon-receptionist/SalonReceptionist.tsx`): Demonstration of function calling capabilities for a salon booking system, with appointment availability checks, booking, cancellation, and manager communication.
 
 - **Logger** (`src/components/logger/Logger.tsx`): Displays logs of API activity.
 
@@ -83,6 +90,7 @@ The salon appointment system showcases Gemini's function calling capabilities wi
 1. **Availability Checking**: Search for open time slots by date or across the week
 2. **Appointment Booking**: Book appointments with customer name, date, time, and service
 3. **Appointment Cancellation**: Cancel appointments using customer name, with disambiguation when needed
+4. **Manager Communication**: Escalate special requests to a salon manager and incorporate responses
 
 All functions include natural language processing for inputs like "today", "tomorrow", and day names.
 
@@ -104,6 +112,7 @@ All functions include natural language processing for inputs like "today", "tomo
    - AI recognizes when to invoke salon functions based on user requests
    - Function responses are processed and displayed in the UI
    - Calendar updates in real-time to reflect changes
+   - Manager escalation occurs for special requests
 
 ## Type System
 
@@ -114,6 +123,7 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - Model responses
 - Tool calls
 - Appointment data structures
+- Manager message data structures
 
 ## Key Interactions
 
@@ -122,6 +132,7 @@ The application uses TypeScript throughout with comprehensive type definitions i
 - **UI Controls**: Managed via ControlTray component
 - **Conversations**: Handled through SidePanel component
 - **Appointment Management**: Handled via SalonReceptionist component with function calling
+- **Manager Communication**: Dedicated inbox and response system for handling special requests
 
 ## Design Patterns
 

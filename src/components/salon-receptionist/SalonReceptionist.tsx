@@ -8,6 +8,18 @@ import { ToolCall } from "../../multimodal-live-types";
 import SimpleCalendar, { Appointment } from "../simple-calendar/SimpleCalendar";
 import "./salon-receptionist.scss";
 
+// Manager message type definition
+type ManagerMessage = {
+  id: string;
+  clientRequest: string;
+  reason: string;
+  priority: 'normal' | 'urgent';
+  timestamp: number;
+  response?: string;
+  responseTimestamp?: number;
+  status: 'pending' | 'responded';
+};
+
 // Get the dates for this week (Monday-Sunday)
 const getWeekDates = (): { date: string; label: string }[] => {
   const today = new Date();
@@ -134,6 +146,31 @@ const cancelAppointmentDeclaration: FunctionDeclaration = {
   }
 };
 
+// Send message to manager function declaration
+const sendMessageToManagerDeclaration: FunctionDeclaration = {
+  name: "send_message_to_manager",
+  description: "Sends a message to the salon manager for special requests, discounts, or to handle complaints",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      client_request: {
+        type: SchemaType.STRING,
+        description: "The client's original request or question that needs manager attention"
+      },
+      reason: {
+        type: SchemaType.STRING,
+        description: "Reason for escalating this to the manager (e.g., discount request, complaint, special accommodation)"
+      },
+      priority: {
+        type: SchemaType.STRING,
+        description: "The urgency level of the request",
+        enum: ["normal", "urgent"]
+      }
+    },
+    required: ["client_request", "reason"]
+  }
+};
+
 // Helper functions for date handling
 const processDateInput = (dateInput: string): string => {
   if (!dateInput) return '';
@@ -215,6 +252,9 @@ function SalonReceptionistComponent() {
   const [lastAvailabilityCheck, setLastAvailabilityCheck] = useState<any | null>(null);
   const [lastBookingResult, setLastBookingResult] = useState<any | null>(null);
   const [lastCancellationResult, setLastCancellationResult] = useState<any | null>(null);
+  const [managerMessages, setManagerMessages] = useState<ManagerMessage[]>([]);
+  const [showManagerInbox, setShowManagerInbox] = useState<boolean>(false);
+  const [lastManagerMessage, setLastManagerMessage] = useState<ManagerMessage | null>(null);
   
   const { client, setConfig } = useLiveAPIContext();
   
@@ -262,6 +302,18 @@ BOOKING:
 - Use the check_availability function when clients ask about available appointments, 
 book_appointment function when they want to book an appointment, 
 cancel_appointment function when they want to cancel an existing appointment. 
+
+MANAGER COMMUNICATION:
+- Use the send_message_to_manager function to escalate special requests to the salon manager.
+- Nicely ask client for a moment while checking with the manager.
+- Always escalate to the manager in these situations:
+  * Discount requests over 20%
+  * Special accommodations outside normal policies
+  * Client complaints or concerns about previous services
+  * Requests for services not listed in the service menu
+  * Payment issues or disputes
+- When sending a message to the manager, be detailed about the client request and reason for escalation.
+- If the manager has responded to a previous message, incorporate their guidance into your response to the client.
 
 BOOKING REQUIREMENTS:
 - Always ask for and collect the client's phone number when booking an appointment. This is required for booking confirmations and appointment reminders.
@@ -402,7 +454,7 @@ FACIALS:
         ],
       },
       tools: [
-        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration, cancelAppointmentDeclaration] },
+        { functionDeclarations: [checkAvailabilityDeclaration, bookAppointmentDeclaration, cancelAppointmentDeclaration, sendMessageToManagerDeclaration] },
       ],
     });
   }, [setConfig]);
@@ -422,6 +474,10 @@ FACIALS:
       
       const cancelAppointmentCall = toolCall.functionCalls.find(
         (fc) => fc.name === cancelAppointmentDeclaration.name
+      );
+      
+      const sendMessageToManagerCall = toolCall.functionCalls.find(
+        (fc) => fc.name === sendMessageToManagerDeclaration.name
       );
       
       if (checkAvailabilityCall) {
@@ -486,6 +542,7 @@ FACIALS:
         }
         
         setLastAvailabilityCheck(response);
+        setLastManagerMessage(null);
         
         // Send response back to the model
         client.sendToolResponse({
@@ -544,6 +601,7 @@ FACIALS:
         }
         
         setLastBookingResult(response);
+        setLastManagerMessage(null);
         
         // Send response back to the model
         client.sendToolResponse({
@@ -624,12 +682,48 @@ FACIALS:
         setLastAvailabilityCheck(null);
         setLastBookingResult(null);
         setLastCancellationResult(response);
+        setLastManagerMessage(null);
         
         // Send response back to the model
         client.sendToolResponse({
           functionResponses: [{
             response: response,
             id: cancelAppointmentCall.id,
+          }],
+        });
+      } else if (sendMessageToManagerCall) {
+        const args = sendMessageToManagerCall.args as {
+          client_request: string;
+          reason: string;
+          priority?: string;
+        };
+        
+        // Create a new manager message
+        const newMessage: ManagerMessage = {
+          id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`, // Generate a unique ID
+          clientRequest: args.client_request,
+          reason: args.reason,
+          priority: (args.priority === 'urgent') ? 'urgent' : 'normal',
+          timestamp: Date.now(),
+          status: 'pending'
+        };
+        
+        // Add to manager messages list
+        setManagerMessages(prevMessages => [...prevMessages, newMessage]);
+        
+        // Set as last message for UI display
+        setLastManagerMessage(newMessage);
+        
+        // Send response back to the model
+        client.sendToolResponse({
+          functionResponses: [{
+            response: {
+              success: true,
+              message_id: newMessage.id,
+              status: 'sent',
+              message: `I've sent your request to the manager regarding: ${args.reason}. The manager will review your request${newMessage.priority === 'urgent' ? ' as soon as possible' : ' shortly'}.`
+            },
+            id: sendMessageToManagerCall.id,
           }],
         });
       }
@@ -643,6 +737,111 @@ FACIALS:
   
   return (
     <div className="salon-receptionist">
+      {lastManagerMessage && (
+        <div className={`manager-message-sent ${lastManagerMessage.priority === 'urgent' ? 'urgent' : 'normal'}`}>
+          <h3>Message sent to Manager</h3>
+          <div className="result-content">
+            <p><strong>Request:</strong> {lastManagerMessage.clientRequest}</p>
+            <p><strong>Reason:</strong> {lastManagerMessage.reason}</p>
+            <p><strong>Priority:</strong> {lastManagerMessage.priority}</p>
+            <p className="result-message">
+              Message sent to manager. {lastManagerMessage.priority === 'urgent' ? 'They will respond as soon as possible.' : 'They will review it shortly.'}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      <div className="manager-controls">
+        <button 
+          className={`toggle-manager-inbox ${showManagerInbox ? 'active' : ''} ${managerMessages.filter(msg => msg.status === 'pending').length > 0 ? 'has-pending' : ''}`}
+          onClick={() => setShowManagerInbox(!showManagerInbox)}
+        >
+          Manager Inbox 
+          {managerMessages.filter(msg => msg.status === 'pending').length > 0 && 
+            <span className="pending-badge">{managerMessages.filter(msg => msg.status === 'pending').length}</span>
+          }
+        </button>
+      </div>
+      
+      {showManagerInbox && (
+        <div className="manager-inbox">
+          <h3>Manager Inbox</h3>
+          {managerMessages.length === 0 ? (
+            <p>No messages from salon receptionist.</p>
+          ) : (
+            <div className="message-list">
+              {managerMessages.map((message) => (
+                <div 
+                  key={message.id} 
+                  className={`message-item ${message.status} ${message.priority}`}
+                >
+                  <div className="message-header">
+                    <span className="timestamp">
+                      {new Date(message.timestamp).toLocaleString()}
+                    </span>
+                    <span className={`status ${message.status}`}>
+                      {message.status}
+                    </span>
+                    <span className={`priority ${message.priority}`}>
+                      {message.priority}
+                    </span>
+                  </div>
+                  <div className="message-content">
+                    <p><strong>Client Request:</strong> {message.clientRequest}</p>
+                    <p><strong>Reason:</strong> {message.reason}</p>
+                  </div>
+                  {message.status === 'pending' ? (
+                    <div className="response-form">
+                      <textarea 
+                        placeholder="Type your response here..."
+                        id={`response-${message.id}`}
+                        rows={3}
+                      />
+                      <button 
+                        onClick={() => {
+                          const responseText = (document.getElementById(`response-${message.id}`) as HTMLTextAreaElement)?.value;
+                          if (responseText) {
+                            // Update the message with the response
+                            setManagerMessages(messages => 
+                              messages.map(msg => 
+                                msg.id === message.id 
+                                  ? {
+                                      ...msg,
+                                      response: responseText,
+                                      responseTimestamp: Date.now(),
+                                      status: 'responded'
+                                    }
+                                  : msg
+                              )
+                            );
+                            
+                            // Notify the AI through a message that there is a manager response
+                            client.send([{ 
+                              text: `MANAGER RESPONSE for request ID ${message.id}: ${responseText}`
+                            }]);
+                          }
+                        }}
+                      >
+                        Send Response
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="response-display">
+                      <p><strong>Manager Response:</strong></p>
+                      <p className="response-text">{message.response}</p>
+                      <p className="response-timestamp">
+                        {message.responseTimestamp ? 
+                          new Date(message.responseTimestamp).toLocaleString() : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      
       {lastAvailabilityCheck && !lastBookingResult && !lastCancellationResult && (
         <div className="availability-results">
           <h3>Last Availability Check</h3>

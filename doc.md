@@ -136,6 +136,204 @@ import { MyFeature } from "./components/my-feature/MyFeature";
 </div>
 ```
 
+## Manager Communication Implementation
+
+The manager communication feature allows the AI to escalate special requests to a manager and incorporate responses into the conversation.
+
+### ManagerMessage Type
+
+Define the type for storing manager messages:
+
+```typescript
+type ManagerMessage = {
+  id: string;
+  clientRequest: string;
+  reason: string;
+  priority: 'normal' | 'urgent';
+  timestamp: number;
+  response?: string;
+  responseTimestamp?: number;
+  status: 'pending' | 'responded';
+};
+```
+
+### Function Declaration for Manager Escalation
+
+```typescript
+const sendMessageToManagerDeclaration: FunctionDeclaration = {
+  name: "send_message_to_manager",
+  description: "Sends a message to the salon manager for special requests, discounts, or to handle complaints",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      client_request: {
+        type: SchemaType.STRING,
+        description: "The client's original request or question that needs manager attention"
+      },
+      reason: {
+        type: SchemaType.STRING,
+        description: "Reason for escalating this to the manager (e.g., discount request, complaint, special accommodation)"
+      },
+      priority: {
+        type: SchemaType.STRING,
+        description: "The urgency level of the request",
+        enum: ["normal", "urgent"]
+      }
+    },
+    required: ["client_request", "reason"]
+  }
+};
+```
+
+### Managing State for Manager Messages
+
+```typescript
+// Inside your component:
+const [managerMessages, setManagerMessages] = useState<ManagerMessage[]>([]);
+const [showManagerInbox, setShowManagerInbox] = useState<boolean>(false);
+const [lastManagerMessage, setLastManagerMessage] = useState<ManagerMessage | null>(null);
+```
+
+### System Instructions for AI
+
+Include guidance for the AI on when to escalate to a manager in the system instructions:
+
+```typescript
+systemInstruction: {
+  parts: [
+    {
+      text: `
+      // Existing instructions...
+      
+      MANAGER COMMUNICATION:
+      - Use the send_message_to_manager function to escalate special requests to the salon manager.
+      - Always escalate to the manager in these situations:
+        * Discount requests over 20%
+        * Special accommodations outside normal policies
+        * Client complaints or concerns about previous services
+        * Requests for services not listed in the service menu
+        * Payment issues or disputes
+      - When sending a message to the manager, be detailed about the client request and reason for escalation.
+      - If the manager has responded to a previous message, incorporate their guidance into your response to the client.
+      
+      // Other instructions...
+      `,
+    },
+  ],
+},
+```
+
+### Tool Call Handler for Manager Communication
+
+```typescript
+const sendMessageToManagerCall = toolCall.functionCalls.find(
+  (fc) => fc.name === sendMessageToManagerDeclaration.name
+);
+
+if (sendMessageToManagerCall) {
+  const args = sendMessageToManagerCall.args as {
+    client_request: string;
+    reason: string;
+    priority?: string;
+  };
+  
+  // Create a new manager message
+  const newMessage: ManagerMessage = {
+    id: `msg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+    clientRequest: args.client_request,
+    reason: args.reason,
+    priority: (args.priority === 'urgent') ? 'urgent' : 'normal',
+    timestamp: Date.now(),
+    status: 'pending'
+  };
+  
+  // Add to manager messages list
+  setManagerMessages(prevMessages => [...prevMessages, newMessage]);
+  
+  // Set as last message for UI display
+  setLastManagerMessage(newMessage);
+  
+  // Send response back to the model
+  client.sendToolResponse({
+    functionResponses: [{
+      response: {
+        success: true,
+        message_id: newMessage.id,
+        status: 'sent',
+        message: `I've sent your request to the manager regarding: ${args.reason}. The manager will review your request${newMessage.priority === 'urgent' ? ' as soon as possible' : ' shortly'}.`
+      },
+      id: sendMessageToManagerCall.id,
+    }],
+  });
+}
+```
+
+### Manager Response UI
+
+Create a UI for the manager to view and respond to messages:
+
+```tsx
+{showManagerInbox && (
+  <div className="manager-inbox">
+    <h3>Manager Inbox</h3>
+    {managerMessages.length === 0 ? (
+      <p>No messages from salon receptionist.</p>
+    ) : (
+      <div className="message-list">
+        {managerMessages.map((message) => (
+          <div 
+            key={message.id} 
+            className={`message-item ${message.status} ${message.priority}`}
+          >
+            {/* Message details */}
+            {message.status === 'pending' ? (
+              <div className="response-form">
+                <textarea 
+                  placeholder="Type your response here..."
+                  id={`response-${message.id}`}
+                  rows={3}
+                />
+                <button 
+                  onClick={() => {
+                    const responseText = (document.getElementById(`response-${message.id}`) as HTMLTextAreaElement)?.value;
+                    if (responseText) {
+                      // Update message with response
+                      setManagerMessages(messages => 
+                        messages.map(msg => 
+                          msg.id === message.id 
+                            ? {
+                                ...msg,
+                                response: responseText,
+                                responseTimestamp: Date.now(),
+                                status: 'responded'
+                              }
+                            : msg
+                        )
+                      );
+                      
+                      // Send response to AI
+                      client.send([{ 
+                        text: `MANAGER RESPONSE for request ID ${message.id}: ${responseText}`
+                      }]);
+                    }
+                  }}
+                >
+                  Send Response
+                </button>
+              </div>
+            ) : (
+              <div className="response-display">
+                {/* Show response */}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+```
+
 ## Preventing Raw Function Results in Audio Responses
 
 - **Result Structure**: Structure your function results to be easily processed by the model. Include a `message` field with a natural language description that the model can incorporate into its response.
@@ -487,7 +685,7 @@ The `check_availability` function supports various date input formats:
 1. **Date Format Consistency**: Always convert different date inputs to YYYY-MM-DD format internally
 2. **Context Awareness**: Include today's date in system instructions for better AI context
 3. **Error Handling**: Add safeguards for invalid date formats
-4. **User-Friendly Responses**: Format dates in natural language for display (e.g., "Monday, July 8")
+4. **User-Friendly Responses**: Format dates in natural language for display (e.g., "Monday, June 10")
 5. **Logging**: Add console logs during date processing for easier debugging
 
 ### Example Prompts
