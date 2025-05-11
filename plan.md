@@ -2,11 +2,12 @@
 * [X] Basic salon info
 * [X] basic calandar
 * [X] Booking appoinments]
-* [ ] Function to contact manager
-  * [ ] UI
-  * [ ] Function to send message to manager
-  * [ ] Abilitiy for manager to send message back to the AI
-  * [ ] 
+* [ ] Edit appointment (move, etc...)
+* [X] Function to contact manager
+  * [X] UI
+  * [X] Function to send message to manager
+  * [X] Abilitiy for manager to send message back to the AI
+  * [ ]
 
 Bugs:
 
@@ -16,3 +17,5 @@ Bugs:
 improvement:
 
 * [X] Add phone number for booking
+* [X] Expand calandar next weeks, months etc...
+* [X] Use phone number for apt management.

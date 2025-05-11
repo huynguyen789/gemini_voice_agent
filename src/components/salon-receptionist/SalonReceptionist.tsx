@@ -132,13 +132,17 @@ const bookAppointmentDeclaration: FunctionDeclaration = {
 // Cancel appointment function declaration
 const cancelAppointmentDeclaration: FunctionDeclaration = {
   name: "cancel_appointment",
-  description: "Cancels an existing appointment in the nail salon calendar",
+  description: "Cancels an existing appointment in the nail salon calendar using phone number as primary identifier",
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
+      phone_number: {
+        type: SchemaType.STRING,
+        description: "Phone number of the customer whose appointment should be cancelled (primary identifier)."
+      },
       customer_name: {
         type: SchemaType.STRING,
-        description: "Name of the customer whose appointment should be cancelled."
+        description: "Optional. Name of the customer whose appointment should be cancelled, used for confirmation."
       },
       date: {
         type: SchemaType.STRING,
@@ -149,7 +153,7 @@ const cancelAppointmentDeclaration: FunctionDeclaration = {
         description: "Optional. The time of the appointment in HH:MM format to help identify the correct appointment."
       }
     },
-    required: ["customer_name"]
+    required: ["phone_number"]
   }
 };
 
@@ -216,6 +220,11 @@ const processDateInput = (dateInput: string): string => {
   
   // Assume it's already in YYYY-MM-DD format
   return dateInput;
+};
+
+// Helper function to normalize phone numbers by removing non-digit characters
+const normalizePhoneNumber = (phoneNumber: string): string => {
+  return phoneNumber.replace(/\D/g, '');
 };
 
 const isDayName = (input: string): boolean => {
@@ -371,10 +380,16 @@ You are a receptionist from Madison Valgari Nails Salon. Your task is helping an
 
 
 GENERAL RULES:
-- Always check availability before asking more details about the appointment.
+- Always use the check_availability function before asking more details about the appointment. Dont need phone number to check availability.
+
 BOOKING:
+- First, check availability using the check_availability function. Then ask for service details. Then technician preference. Then phone number, name. Make sure to have all of the info, before booking the appointment using the book_appointment function.
 - MAKE SURE TO CALL THE book_appointment function to book the appointment!
 - If client ask for 2 services, input them in the same api call, not 2 separate ones.
+- Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.
+- If the client doesn't have any nails currently, recommend Gel X as a simple, healthy option.
+- If a client asks something you're not sure about, state that you need to check with the manager.
+
 
 - Use the check_availability function when clients ask about available appointments, 
 book_appointment function when they want to book an appointment, 
@@ -392,16 +407,19 @@ MANAGER COMMUNICATION:
 - When sending a message to the manager, be detailed about the client request and reason for escalation.
 - If the manager has responded to a previous message, incorporate their guidance into your response to the client.
 
-BOOKING REQUIREMENTS:
-- Always ask for and collect the client's phone number when booking an appointment. This is required for booking confirmations and appointment reminders.
-- A valid phone number should be in the format (XXX) XXX-XXXX, XXX-XXX-XXXX, or without formatting.
-- If a client doesn't provide a phone number initially, kindly ask for it before completing the booking.
 
-Clients may ask about specific dates, times, or use terms like "today", "tomorrow", or day names (e.g., "Wednesday"). When you receive function results, formulate a natural response based on the data - do not read out the raw data.
+IMPORTANT: When booking or canceling appointments, always use phone numbers as the primary identifier. Phone numbers are more unique than names and help prevent confusion between customers with the same or similar names. Always collect a phone number when booking and ask for a phone number first when canceling appointments.
 
-If the client doesn't have any nails currently, recommend Gel X as a simple, healthy option.
+BOOKING PROCESS:
+1. Always collect customer's full phone number before booking
+2. Make sure to collect customer name, service, date and time
+3. Verify the phone number format
+4. Then use the book_appointment function
 
-If a client asks something you're not sure about, state that you need to check with the manager.
+CANCELLATION PROCESS:
+1. Always ask for the customer's phone number first
+2. Use the phone number with cancel_appointment function
+3. If multiple appointments are found for the same phone number, collect date/time to identify the correct one
 
 
 SALON INFORMATION:
@@ -440,6 +458,8 @@ POLICIES:
 - If there are two no-shows, a $25 deposit is required for the next appointment
 - No refunds or redos after the client leaves the facility
 - Gratuity can be placed on cards or via payment apps (Venmo, CashApp, Zelle)
+
+
 
 DETAILED SERVICE MENU:
 
@@ -706,13 +726,16 @@ FACIALS:
         const isAvailable = !isSlotBooked(dateToBook, args.time);
         
         if (isAvailable) {
+          // Normalize phone number while preserving the original format for display
+          const inputPhoneNumber = args.phoneNumber;
+          
           // Create a new appointment
           const newAppointment: Appointment = {
             id: Math.max(0, ...appointments.map(a => a.id)) + 1, // Generate a new unique ID
             date: dateToBook,
             time: args.time,
             customerName: args.customerName,
-            phoneNumber: args.phoneNumber,
+            phoneNumber: inputPhoneNumber, // Keep the original formatted number for display
             service: args.service,
             technician: args.technician || undefined
           };
@@ -726,7 +749,7 @@ FACIALS:
           response = {
             success: true,
             appointment: newAppointment,
-            message: `Successfully booked an appointment for ${args.customerName} on ${formatDate(dateToBook)} at ${args.time} for ${args.service}${args.technician ? ` with ${args.technician}` : ''}. Confirmation details will be sent to ${args.phoneNumber}.`
+            message: `Successfully booked an appointment for ${args.customerName} on ${formatDate(dateToBook)} at ${args.time} for ${args.service}${args.technician ? ` with ${args.technician}` : ''}. Confirmation details will be sent to ${inputPhoneNumber}.`
           };
         } else {
           // Create error response
@@ -748,20 +771,66 @@ FACIALS:
         });
       } else if (cancelAppointmentCall) {
         const args = cancelAppointmentCall.args as {
-          customer_name: string;
+          phone_number: string;
+          customer_name?: string;
           date?: string;
           time?: string;
         };
+        
+        console.log("=== CANCEL APPOINTMENT REQUEST ===");
+        console.log("Phone:", args.phone_number);
+        console.log("Name:", args.customer_name || "Not specified");
+        console.log("Date:", args.date || "Not specified");
+        console.log("Time:", args.time || "Not specified");
+        console.log("Current appointments:", appointments.map(a => ({
+          id: a.id,
+          name: a.customerName,
+          phone: a.phoneNumber,
+          normalizedPhone: normalizePhoneNumber(a.phoneNumber),
+          date: a.date,
+          time: a.time
+        })));
         
         let response: any;
         
         // Process date input if provided
         const dateToCancel = args.date ? processDateInput(args.date) : undefined;
+        console.log("Processed date for cancellation:", dateToCancel);
         
-        // Find the appointment(s) by customer name
-        let appointmentsToCancel = appointments.filter(app => 
-          app.customerName.toLowerCase().includes(args.customer_name.toLowerCase())
-        );
+        // Find the appointment(s) by phone number
+        const normalizedSearchPhone = normalizePhoneNumber(args.phone_number);
+        console.log(`Searching for phone: ${args.phone_number}, normalized: ${normalizedSearchPhone}`);
+
+        // After the phone number matching, add a flag to track the match type
+        let matchType = "exact";
+
+        // Try exact matching first
+        let appointmentsToCancel = appointments.filter(app => {
+          const normalizedAppPhone = normalizePhoneNumber(app.phoneNumber);
+          console.log(`Comparing with: ${app.phoneNumber}, normalized: ${normalizedAppPhone}`);
+          return normalizedAppPhone === normalizedSearchPhone;
+        });
+
+        // If no results with exact match, try partial matching (last 7 digits)
+        if (appointmentsToCancel.length === 0 && normalizedSearchPhone.length >= 7) {
+          console.log("No exact matches, trying partial matching with last digits");
+          const lastDigits = normalizedSearchPhone.slice(-7); // Get last 7 digits
+          appointmentsToCancel = appointments.filter(app => {
+            const normalizedAppPhone = normalizePhoneNumber(app.phoneNumber);
+            return normalizedAppPhone.endsWith(lastDigits);
+          });
+          
+          if (appointmentsToCancel.length > 0) {
+            matchType = "partial";
+          }
+        }
+        
+        // Further filter by customer name if provided
+        if (args.customer_name && args.customer_name.trim() !== '') {
+          appointmentsToCancel = appointmentsToCancel.filter(app => 
+            app.customerName.toLowerCase().includes(args.customer_name!.toLowerCase())
+          );
+        }
         
         // Further filter by date if provided
         if (dateToCancel) {
@@ -775,25 +844,32 @@ FACIALS:
         
         if (appointmentsToCancel.length === 0) {
           // No appointments found
+          const customerNamePart = args.customer_name ? ` for ${args.customer_name}` : '';
+          const datePart = dateToCancel ? ` on ${formatDate(dateToCancel)}` : '';
+          const timePart = args.time ? ` at ${args.time}` : '';
+          const normalizedPart = ` (normalized: ${normalizedSearchPhone})`;
+          
           response = {
             success: false,
-            message: `Sorry, no appointments found for ${args.customer_name}${dateToCancel ? ` on ${formatDate(dateToCancel)}` : ''}${args.time ? ` at ${args.time}` : ''}.`
+            message: `Sorry, no appointments found for phone number ${args.phone_number}${normalizedPart}${customerNamePart}${datePart}${timePart}.`
           };
         } else if (appointmentsToCancel.length > 1 && !dateToCancel && !args.time) {
           // Multiple appointments found without date/time specified
           response = {
             success: false,
             multiple_appointments: true,
-            customer_name: args.customer_name,
+            phone_number: args.phone_number,
+            customer_name: args.customer_name || 'Customer',
             appointments: appointmentsToCancel.map(app => ({
               date: app.date,
               formatted_date: formatDate(app.date),
               time: app.time,
               service: app.service,
               phoneNumber: app.phoneNumber,
+              customerName: app.customerName,
               technician: app.technician
             })),
-            message: `${args.customer_name} has multiple appointments. Please specify a date or time to identify which one to cancel.`
+            message: `Found multiple appointments for phone number ${args.phone_number}. Please specify a date or time to identify which one to cancel.`
           };
         } else {
           // Cancel the appointment (first one if multiple match the filters)
@@ -807,10 +883,16 @@ FACIALS:
           setCheckedDate(appointmentToCancel.date);
           
           // Create success response
+          let phoneNoteMsg = '';
+          if (matchType === "partial") {
+            phoneNoteMsg = ` Note: Phone format differed from stored format (${appointmentToCancel.phoneNumber}).`;
+          }
+          
           response = {
             success: true,
             cancelled_appointment: appointmentToCancel,
-            message: `Successfully cancelled the appointment for ${appointmentToCancel.customerName} on ${formatDate(appointmentToCancel.date)} at ${appointmentToCancel.time} for ${appointmentToCancel.service}${appointmentToCancel.technician ? ` with ${appointmentToCancel.technician}` : ''}.`
+            match_type: matchType,
+            message: `Successfully cancelled the appointment for ${appointmentToCancel.customerName} (${appointmentToCancel.phoneNumber}) on ${formatDate(appointmentToCancel.date)} at ${appointmentToCancel.time} for ${appointmentToCancel.service}${appointmentToCancel.technician ? ` with ${appointmentToCancel.technician}` : ''}.${phoneNoteMsg}`
           };
         }
         
